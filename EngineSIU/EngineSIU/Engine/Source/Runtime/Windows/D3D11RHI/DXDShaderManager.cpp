@@ -662,3 +662,61 @@ ID3D11PixelShader* FDXDShaderManager::GetPixelShaderByKey(const std::wstring& Ke
     }
     return nullptr;
 }
+
+
+void FDXDShaderManager::SetVertexShader(const std::wstring& KeyName, ID3D11DeviceContext* DeviceContext) const
+{
+    if (DeviceContext == nullptr)
+    {
+        return;
+    }
+    if (ID3D11VertexShader* Shader = GetVertexShaderByKey(KeyName))
+    {
+        DeviceContext->VSSetShader(Shader, nullptr, 0);
+    }
+}
+
+void FDXDShaderManager::SetVertexShaderAndInputLayout(const std::wstring KeyName, ID3D11DeviceContext* DeviceContext) const
+{
+    if (DeviceContext == nullptr)
+    {
+        return;
+    }
+    if (ID3D11VertexShader* Shader = GetVertexShaderByKey(KeyName))
+    {
+        DeviceContext->VSSetShader(Shader, nullptr, 0);
+    }
+    if (ID3D11InputLayout* Layout = GetInputLayoutByKey(KeyName))
+    {
+        DeviceContext->IASetInputLayout(Layout);
+    }
+}
+
+void FDXDShaderManager::SetPixelShader(const std::wstring& KeyName, ID3D11DeviceContext* DeviceContext) const
+{
+    if (DeviceContext == nullptr)
+    {
+        return;
+    }
+    if (ID3D11PixelShader* Shader = GetPixelShaderByKey(KeyName))
+    {
+        DeviceContext->PSSetShader(Shader, nullptr, 0);
+    }
+}
+
+void FDXDShaderManager::SetInputLayout(const std::wstring& KeyName, ID3D11DeviceContext* DeviceContext) const
+{
+    if (DeviceContext == nullptr)
+    {
+        return;
+    }
+    if (ID3D11InputLayout* Layout = GetInputLayoutByKey(KeyName))
+    {
+        DeviceContext->IASetInputLayout(Layout);
+    }
+}
+
+void FDXDShaderManager::SetPixelShaderNull(ID3D11DeviceContext* DeviceContext) const
+{
+    DeviceContext->PSSetShader(nullptr, nullptr, 0);
+}

@@ -291,6 +291,11 @@
     <ClCompile Include="Engine\Source\ThirdParty\tinyfiledialogs\tinyfiledialogs.cpp" />
     <ClCompile Include="LightGridGenerator.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Renderer\ShadowPass.cpp" />
+    <FxCompile Include="Shaders\ShadowDepthMapShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <None Include="Shaders\CompositingShader.hlsl" />
     <None Include="Shaders\DepthBufferPixelShader.hlsl" />
     <None Include="Shaders\DepthBufferVertexShader.hlsl" />

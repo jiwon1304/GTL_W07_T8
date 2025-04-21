@@ -7,13 +7,16 @@
 #include "Components/Light/PointLightComponent.h"
 #include "Components/Light/SpotLightComponent.h"
 #include "RendererHelpers.h"
-#include "Define.h"
 #include "UnrealClient.h"
 #include "UnrealEd/EditorViewportClient.h"
 #include "Runtime/Windows/D3D11RHI/DXDShaderManager.h"
 #include "Runtime/Windows/D3D11RHI/DXDBufferManager.h"
 #include "Runtime/Windows/D3D11RHI/GraphicDevice.h"
 #include "Runtime/Core/Math/JungleMath.h"
+#include "Engine/Classes/Components/Material/Material.h"
+#include "Components/StaticMeshComponent.h"
+#include "BaseGizmos/GizmoBaseComponent.h"
+#include "Engine/EditorEngine.h"
 
 
 void FShadowPass::Initialize(FDXDBufferManager* InBufferManager, FGraphicsDevice* InGraphics, FDXDShaderManager* InShaderManage)
@@ -22,20 +25,32 @@ void FShadowPass::Initialize(FDXDBufferManager* InBufferManager, FGraphicsDevice
     Graphics = InGraphics;
     ShaderManager = InShaderManage;
 
+    CreateShader();
     CreateTexture(TextureSize, NumShadowMaps);
     CreateBuffer(NumShadowMaps);
 }
 
 void FShadowPass::PrepareRender()
 {
+    for (const auto iter : TObjectRange<UStaticMeshComponent>())
+    {
+        if (!Cast<UGizmoBaseComponent>(iter) && iter->GetWorld() == GEngine->ActiveWorld)
+        {
+            StaticMeshComponents.Add(iter);
+        }
+    }
 }
 
 void FShadowPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
 {
     UpdatePerspectiveShadowMap(Viewport);
-    
-    BufferManager->BindStructuredBuffer(TransformBufferKey, 9, EShaderStage::Vertex, EShaderViewType::SRV);
 
+    ShaderManager->SetVertexShaderAndInputLayout(VertexShaderBufferKey, Graphics->DeviceContext);
+    ShaderManager->SetPixelShaderNull(Graphics->DeviceContext);
+
+    BufferManager->BindStructuredBuffer(TransformDataBufferKey, TransformSRVSlot, EShaderStage::Vertex, EShaderViewType::SRV); // 실제 matrix
+    BufferManager->BindConstantBuffer(ViewProjTransformBufferKey, ViewProjTransformCBSlot, EShaderStage::Vertex); // index만
+    BufferManager->BindConstantBuffer(WorldTransformBufferKey, WorldTransformCBSlot, EShaderStage::Vertex); // worldmatrix
     for (const auto& Pair : IndicesMap)
     {
         ULightComponentBase* Light = Pair.Key;
@@ -44,15 +59,65 @@ void FShadowPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
         // 사용 예
         for (uint32 Index : Indices)
         {
+            BufferManager->UpdateConstantBuffer(ViewProjTransformBufferKey, Index);
+            Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, ShadowMapDSV[Index]);
+            Graphics->DeviceContext->ClearDepthStencilView(ShadowMapDSV[Index], D3D11_CLEAR_DEPTH, 1.0f, 0);
             // OMSetrendertargets에서 DSV연결
             // draw -> texture2d에 그려짐
             // ... Do something with Index ...
+
+            for (UStaticMeshComponent* Comp : StaticMeshComponents)
+            {
+                if (!Comp || !Comp->GetStaticMesh())
+                {
+                    continue;
+                }
+
+                OBJ::FStaticMeshRenderData* RenderData = Comp->GetStaticMesh()->GetRenderData();
+                if (RenderData == nullptr)
+                {
+                    continue;
+                }
+
+                UEditorEngine* Engine = Cast<UEditorEngine>(GEngine);
+
+                FMatrix WorldMatrix = Comp->GetWorldMatrix();
+
+                BufferManager->UpdateConstantBuffer(WorldTransformBufferKey, WorldMatrix);
+
+                RenderPrimitive(RenderData, Comp->GetStaticMesh()->GetMaterials(), Comp->GetOverrideMaterials(), Comp->GetselectedSubMeshIndex());
+            }
         }
     }
+
+    Graphics->DeviceContext->OMSetRenderTargets(0, nullptr ,nullptr);
+    Graphics->DeviceContext->PSSetShaderResources(ShadowMapSRVSlot, 1, &ShadowMapSRV);
+
 }
+
+
+
+
+
 
 void FShadowPass::ClearRenderArr()
 {
+    StaticMeshComponents.Empty();
+}    
+
+
+HRESULT FShadowPass::CreateShader()
+{
+    D3D11_INPUT_ELEMENT_DESC StaticMeshLayoutDesc[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"MATERIAL_INDEX", 0, DXGI_FORMAT_R32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+    };
+
+    return ShaderManager->AddVertexShaderAndInputLayout(VertexShaderBufferKey, L"Shaders/ShadowDepthMapShader.hlsl", "mainVS", StaticMeshLayoutDesc, ARRAYSIZE(StaticMeshLayoutDesc));
 }
 
 /// <summary>
@@ -62,7 +127,7 @@ void FShadowPass::ClearRenderArr()
 /// <param name="NumMaps"></param> 배열의 길이입니다.
 HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
 {
-    if (NumMaps > 4096)
+    if (NumMaps > 1024)
     {
         UE_LOG(LogLevel::Error, TEXT("Texture2DArray의 최대 크기 4096를 넘었습니다."));
         return S_FALSE;
@@ -87,16 +152,21 @@ HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
     }
 
     // 2. DepthStencilView 생성
-    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-    dsvDesc.Format = DXGI_FORMAT_D32_FLOAT; // Typeless의 실질적인 Depth format
-    dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-    dsvDesc.Texture2DArray.MipSlice = 0;
-    dsvDesc.Texture2DArray.FirstArraySlice = 0;
-    dsvDesc.Texture2DArray.ArraySize = NumMaps;
+    for (int i = 0; i < NumMaps; ++i)
+    {
+        D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+        dsvDesc.Format = DXGI_FORMAT_D32_FLOAT; // Typeless의 실질적인 Depth format
+        dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+        dsvDesc.Texture2DArray.MipSlice = 0;
+        dsvDesc.Texture2DArray.FirstArraySlice = i;
+        dsvDesc.Texture2DArray.ArraySize = 1;
 
-    hr = Graphics->Device->CreateDepthStencilView(ShadowMapTexture, &dsvDesc, &ShadowMapDSV);
-    if (FAILED(hr)) {
-        return hr;
+        ID3D11DepthStencilView* DSV;
+        hr = Graphics->Device->CreateDepthStencilView(ShadowMapTexture, &dsvDesc, &DSV);
+        if (FAILED(hr)) {
+            return hr;
+        }
+        ShadowMapDSV.Add(DSV);
     }
 
     // 3. ShaderResourceView 생성
@@ -119,7 +189,18 @@ HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
 
 HRESULT FShadowPass::CreateBuffer(uint32 NumTransforms)
 {
-    return BufferManager->CreateStructuredBuffer(TransformBufferKey, sizeof(FMatrix) * NumTransforms, D3D11_BIND_SHADER_RESOURCE,
+    HRESULT hr;
+    hr = BufferManager->CreateBufferGeneric<uint32>(ViewProjTransformBufferKey, nullptr, sizeof(uint32), D3D11_BIND_CONSTANT_BUFFER, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+    if (FAILED(hr)) {
+        return hr;
+    }
+
+    hr = BufferManager->CreateBufferGeneric<FMatrix>(WorldTransformBufferKey, nullptr, sizeof(FMatrix), D3D11_BIND_CONSTANT_BUFFER, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+    if (FAILED(hr)) {
+        return hr;
+    }
+
+    return BufferManager->CreateStructuredBuffer(TransformDataBufferKey, sizeof(FMatrix) * NumTransforms, D3D11_BIND_SHADER_RESOURCE,
         D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE, sizeof(FMatrix), NumTransforms);
 }
 
@@ -140,12 +221,12 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
         if (UDirectionalLightComponent* DirLight = Cast<UDirectionalLightComponent>(LightComponent))
         {
             FVector CameraPosition = Viewport->GetCameraLocation();
-            FVector eye = CameraPosition - DirLight->GetDirection() * 128;
+            FVector eye = CameraPosition - DirLight->GetDirection() * 64;
             FVector target = CameraPosition;
             FVector up = FVector::UpVector;
             FMatrix View = JungleMath::CreateViewMatrix(eye, target, up);
 
-            FMatrix Proj = JungleMath::CreateOrthoProjectionMatrix(100.0, 100.0, 0.1f, 100.f); // 파라미터 받아서값 조절할 수 있게 만들기
+            FMatrix Proj = JungleMath::CreateOrthoProjectionMatrix(100.0, 100.0, 0.1f, 10000.f); // 파라미터 받아서값 조절할 수 있게 만들기
 
             IndicesMap[LightComponent].Add(Index);
             Transforms.Add(View * Proj);
@@ -155,7 +236,7 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
         // point spot은 나중에 작성
     }
 
-    BufferManager->UpdateStructuredBuffer(TransformBufferKey, Transforms);
+    BufferManager->UpdateStructuredBuffer(TransformDataBufferKey, Transforms);
 }
 
 //void FShadowPass::AddTargetLight(ULightComponentBase* InLightComponent)
@@ -177,4 +258,31 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
 
 void FShadowPass::UpdateCascadedShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport)
 {
+}
+
+
+void FShadowPass::RenderPrimitive(OBJ::FStaticMeshRenderData* RenderData, TArray<FStaticMaterial*> Materials, TArray<UMaterial*> OverrideMaterials, int SelectedSubMeshIndex) const
+{
+    UINT Stride = sizeof(FStaticMeshVertex);
+    UINT Offset = 0;
+
+    Graphics->DeviceContext->IASetVertexBuffers(0, 1, &RenderData->VertexBuffer, &Stride, &Offset);
+
+    if (RenderData->IndexBuffer)
+    {
+        Graphics->DeviceContext->IASetIndexBuffer(RenderData->IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+    }
+
+    if (RenderData->MaterialSubsets.Num() == 0)
+    {
+        Graphics->DeviceContext->DrawIndexed(RenderData->Indices.Num(), 0, 0);
+        return;
+    }
+
+    for (int SubMeshIndex = 0; SubMeshIndex < RenderData->MaterialSubsets.Num(); SubMeshIndex++)
+    {
+        uint32 StartIndex = RenderData->MaterialSubsets[SubMeshIndex].IndexStart;
+        uint32 IndexCount = RenderData->MaterialSubsets[SubMeshIndex].IndexCount;
+        Graphics->DeviceContext->DrawIndexed(IndexCount, StartIndex, 0);
+    }
 }
