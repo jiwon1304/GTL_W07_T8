@@ -297,7 +297,6 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
                 IndicesMap[LightComponent].Add(Index);
                 Transforms.Add(View * Proj);
                 Index++;
-
             }   
         }
 

@@ -70,7 +70,7 @@ private:
     TArray<class UStaticMeshComponent*> StaticMeshComponents;
 
     uint32 TextureSize = 1024; // initial value
-    uint32 NumShadowMaps = 8; // initial value
+    uint32 NumShadowMaps = 128; // initial value
 
     FWString VertexShaderBufferKey = L"ShadowPassDepthRenderShader";
     FString TransformDataBufferKey = "ShadowTransformDataBufferKey";

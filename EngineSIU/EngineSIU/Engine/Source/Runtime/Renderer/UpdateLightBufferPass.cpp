@@ -105,8 +105,8 @@ void FUpdateLightBufferPass::UpdateLightBuffer() const
         {
             LightBufferData.PointLights[PointLightsCount] = Light->GetPointLightInfo();
             LightBufferData.PointLights[PointLightsCount].Position = Light->GetWorldLocation();
-            LightBufferData.Directional[PointLightsCount].ShadowMapIndex = FShadowPass::GetShadowMapIndex(Light)[0];
-            LightBufferData.Directional[PointLightsCount].CastShadow = 1; // Ture;
+            LightBufferData.PointLights[PointLightsCount].ShadowMapIndex = FShadowPass::GetShadowMapIndex(Light)[0];
+            LightBufferData.PointLights[PointLightsCount].CastShadow = 1; // Ture;
             PointLightsCount++;
         }
     }

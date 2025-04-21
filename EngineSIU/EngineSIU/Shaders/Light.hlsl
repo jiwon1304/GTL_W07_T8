@@ -307,12 +307,31 @@ float4 PointLight(int Index, float3 WorldPosition, float3 WorldNormal, float3 Wo
     
     float3 LightDir = normalize(ToLight);
     float DiffuseFactor = CalculateDiffuse(WorldNormal, LightDir);
+    
+    // Check Shadow
+    float ShadowFactor = 0.f;
+    
+    if (LightInfo.CastsShadows)
+    {
+        for (int i = 0; i < 6; ++i)
+        {
+            ShadowFactor += CalculateShadowFactor(
+                LigthViewProjection[LightInfo.ShadowMapIndex + i].TransposedMat,
+                LightInfo.ShadowMapIndex + i,
+                WorldPosition,
+                WorldNormal,
+                LightDir
+            );
+        }
+    }
+    
+    
 #ifdef LIGHTING_MODEL_LAMBERT
-    float3 Lit = (DiffuseFactor * DiffuseColor) * LightInfo.LightColor.rgb;
+    float3 Lit = (DiffuseFactor * DiffuseColor) * ShadowFactor * LightInfo.LightColor.rgb;
 #else
     float3 ViewDir = normalize(WorldViewPosition - WorldPosition);
     float SpecularFactor = CalculateSpecular(WorldNormal, LightDir, ViewDir, Material.SpecularScalar);
-    float3 Lit = ((DiffuseFactor * DiffuseColor) + (SpecularFactor * Material.SpecularColor)) * LightInfo.LightColor.rgb;
+    float3 Lit = ((DiffuseFactor * DiffuseColor) + (SpecularFactor * Material.SpecularColor)) * ShadowFactor * LightInfo.LightColor.rgb;
 #endif
     
     return float4(Lit * Attenuation * LightInfo.Intensity, 1.0);
