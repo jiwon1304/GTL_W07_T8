@@ -22,6 +22,11 @@ struct FDirectionalLightInfo
 
     float3 Direction;
     float Intensity;
+    
+    int Index;
+    int CastShadow;
+    float Pad1;
+    float Pad2;
 };
 
 struct FPointLightInfo

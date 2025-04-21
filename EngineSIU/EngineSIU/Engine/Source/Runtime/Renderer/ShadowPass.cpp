@@ -99,7 +99,6 @@ void FShadowPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
 
     Graphics->DeviceContext->OMSetRenderTargets(0, nullptr ,nullptr);
     Graphics->DeviceContext->PSSetShaderResources(ShadowMapSRVSlot, 1, &ShadowMapSRV);
-
 }
 
 
@@ -252,7 +251,6 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
 
             IndicesMap[LightComponent].Add(Index);
             Transforms.Add(View * Proj);
-            Index++;
         }
         // index 부족하면 동적으로 늘리기
         // point spot은 나중에 작성
