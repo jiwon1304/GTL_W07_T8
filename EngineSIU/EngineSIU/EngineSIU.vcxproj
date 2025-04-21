@@ -469,7 +469,7 @@
     <ClInclude Include="Engine\Source\ThirdParty\JSON\json.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="UberLit.hlsl">
+    <FxCompile Include="Shaders\UberLit.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
