@@ -234,7 +234,7 @@ void PropertyEditorPanel::Render()
                 LightDirection = dirlightObj->GetDirection();
                 FImGuiWidget::DrawVec3Control("Direction", LightDirection, 0, 85);
 
-                RenderLightShadowMap(dirlightObj);
+                //RenderLightShadowMap(dirlightObj);
 
                 ImGui::TreePop();
             }
