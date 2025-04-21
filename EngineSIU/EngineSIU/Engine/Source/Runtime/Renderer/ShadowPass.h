@@ -50,7 +50,7 @@ private:
     class FDXDShaderManager* ShaderManager;
 
     uint32 TextureSize = 1024; // initial value
-    uint32 NumShadowMaps = 128; // initial value
+    uint32 NumShadowMaps = 8; // initial value
     ID3D11Texture2D* ShadowMapTexture = nullptr;
     ID3D11DepthStencilView* ShadowMapDSV = nullptr;
     ID3D11ShaderResourceView* ShadowMapSRV = nullptr;

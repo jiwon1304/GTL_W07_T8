@@ -34,17 +34,18 @@ void FShadowPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
 {
     UpdatePerspectiveShadowMap(Viewport);
     
+    BufferManager->BindStructuredBuffer(TransformBufferKey, 9, EShaderStage::Vertex, EShaderViewType::SRV);
+
     for (const auto& Pair : IndicesMap)
     {
         ULightComponentBase* Light = Pair.Key;
-        const TArray<uint32>& Indices = Pair.Value;
+        const TArray<uint32>& Indices = Pair.Value; // transform(view proj) 동시에, texture2d까지
 
         // 사용 예
         for (uint32 Index : Indices)
         {
-            BufferManager->BindStructuredBuffer(TransformBufferKey, 9, EShaderStage::Vertex, EShaderViewType::SRV);
-            // rtv bind
-            // draw
+            // OMSetrendertargets에서 DSV연결
+            // draw -> texture2d에 그려짐
             // ... Do something with Index ...
         }
     }
