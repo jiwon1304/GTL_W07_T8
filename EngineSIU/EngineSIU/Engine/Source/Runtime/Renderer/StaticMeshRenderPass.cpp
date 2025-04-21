@@ -204,6 +204,9 @@ void FStaticMeshRenderPass::PrepareRenderState(const std::shared_ptr<FEditorView
     {
         Graphics->DeviceContext->PSSetShader(PixelShader, nullptr, 0);
     }
+
+    D3D11_VIEWPORT DViewport = Viewport->GetViewportResource()->GetD3DViewport();
+    Graphics->DeviceContext->RSSetViewports(1, &DViewport);
 }
 
 void FStaticMeshRenderPass::UpdateObjectConstant(const FMatrix& WorldMatrix, const FVector4& UUIDColor, bool bIsSelected) const

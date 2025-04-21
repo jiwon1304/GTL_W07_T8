@@ -20,6 +20,7 @@
 #include "GameFramework/Actor.h"
 #include "Engine/AssetManager.h"
 #include "UObject/UObjectIterator.h"
+#include "Renderer/ShadowPass.h"
 
 void PropertyEditorPanel::Render()
 {
@@ -233,8 +234,13 @@ void PropertyEditorPanel::Render()
                 LightDirection = dirlightObj->GetDirection();
                 FImGuiWidget::DrawVec3Control("Direction", LightDirection, 0, 85);
 
+                RenderLightShadowMap(dirlightObj);
+
                 ImGui::TreePop();
             }
+
+
+
 
             ImGui::PopStyleColor();
         }
@@ -883,6 +889,23 @@ void PropertyEditorPanel::RenderMaterialTexture(UMaterial* InMaterial)
     ImGui::Image((ImTextureID)(intptr_t)SRV, ImVec2(RegionWidth, aspect * RegionWidth));
     
     //ImGui::End();
+}
+
+void PropertyEditorPanel::RenderLightShadowMap(ULightComponentBase* InLightComponent)
+{
+    ID3D11ShaderResourceView* SRV = FShadowPass::GetShadowMapSRV();
+    TArray<uint32> Indices = FShadowPass::GetShadowMapIndex(InLightComponent);
+    float RegionWidth = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
+
+    if (ImGui::TreeNodeEx("ShadowMaps", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
+    {
+
+        for (uint32 i = 0; i < Indices.Num(); ++i)
+        {
+            ImGui::Image((ImTextureID)(intptr_t)SRV, ImVec2(250,250));
+        }
+        ImGui::TreePop();
+    }
 }
 
 

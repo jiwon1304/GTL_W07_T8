@@ -19,6 +19,12 @@
 #include "Engine/EditorEngine.h"
 
 
+ID3D11Texture2D* FShadowPass::ShadowMapTexture;
+TArray<ID3D11DepthStencilView*> FShadowPass::ShadowMapDSV;
+ID3D11ShaderResourceView* FShadowPass::ShadowMapSRV;
+TMap<ULightComponentBase*, TArray<uint32>> FShadowPass::IndicesMap;
+D3D11_VIEWPORT FShadowPass::ShadowMapViewport;
+
 void FShadowPass::Initialize(FDXDBufferManager* InBufferManager, FGraphicsDevice* InGraphics, FDXDShaderManager* InShaderManage)
 {
     BufferManager = InBufferManager;
@@ -51,6 +57,7 @@ void FShadowPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
     BufferManager->BindStructuredBuffer(TransformDataBufferKey, TransformSRVSlot, EShaderStage::Vertex, EShaderViewType::SRV); // 실제 matrix
     BufferManager->BindConstantBuffer(ViewProjTransformBufferKey, ViewProjTransformCBSlot, EShaderStage::Vertex); // index만
     BufferManager->BindConstantBuffer(WorldTransformBufferKey, WorldTransformCBSlot, EShaderStage::Vertex); // worldmatrix
+    Graphics->DeviceContext->RSSetViewports(1, &ShadowMapViewport);
     for (const auto& Pair : IndicesMap)
     {
         ULightComponentBase* Light = Pair.Key;
@@ -185,6 +192,12 @@ HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
 
     // ShadowMap 텍스처는 내부적으로 관리되므로 참조 해제
     ShadowMapTexture->Release();
+
+    ShadowMapViewport = {0};
+    ShadowMapViewport.Width = static_cast<float>(TextureSize);
+    ShadowMapViewport.Height = static_cast<float>(TextureSize);
+    ShadowMapViewport.MaxDepth = 1.0f;
+    ShadowMapViewport.MinDepth = 0.f;
 }
 
 HRESULT FShadowPass::CreateBuffer(uint32 NumTransforms)
@@ -221,12 +234,21 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
         if (UDirectionalLightComponent* DirLight = Cast<UDirectionalLightComponent>(LightComponent))
         {
             FVector CameraPosition = Viewport->GetCameraLocation();
-            FVector eye = CameraPosition - DirLight->GetDirection() * 64;
-            FVector target = CameraPosition;
+            // 일단은 Component의 위치를 기준으로 함(확인하기 편하게)
+            //FVector eye = CameraPosition - DirLight->GetDirection() * 64;
+            FVector eye = DirLight->GetWorldLocation();
+            FVector target = eye + DirLight->GetDirection();
             FVector up = FVector::UpVector;
+
+            if (abs(DirLight->GetDirection().Dot(up)) > 1 - FLT_EPSILON)
+            {
+                up = FVector::RightVector;
+            }
+            
             FMatrix View = JungleMath::CreateViewMatrix(eye, target, up);
 
-            FMatrix Proj = JungleMath::CreateOrthoProjectionMatrix(100.0, 100.0, 0.1f, 10000.f); // 파라미터 받아서값 조절할 수 있게 만들기
+            FMatrix Proj = JungleMath::CreateOrthoProjectionMatrix(30.0, 30.0, 0.1f, 300.f); // 파라미터 받아서값 조절할 수 있게 만들기
+            //FMatrix Proj = JungleMath::CreateProjectionMatrix(150, 1, 0.1, 30.f);
 
             IndicesMap[LightComponent].Add(Index);
             Transforms.Add(View * Proj);

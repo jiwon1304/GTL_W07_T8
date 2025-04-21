@@ -26,6 +26,10 @@ public:
 
     virtual void ClearRenderArr();
 
+    static ID3D11ShaderResourceView* GetShadowMapSRV() { return ShadowMapSRV; }
+
+    static TArray<uint32> GetShadowMapIndex(ULightComponentBase* InLightComponent) { return IndicesMap[InLightComponent]; }
+
 private:
     HRESULT CreateShader();
 
@@ -66,16 +70,17 @@ private:
 
     uint32 TextureSize = 1024; // initial value
     uint32 NumShadowMaps = 8; // initial value
-    ID3D11Texture2D* ShadowMapTexture = nullptr;
-    TArray<ID3D11DepthStencilView*> ShadowMapDSV;
-    ID3D11ShaderResourceView* ShadowMapSRV = nullptr;
+    static ID3D11Texture2D* ShadowMapTexture;
+    static TArray<ID3D11DepthStencilView*> ShadowMapDSV;
+    static ID3D11ShaderResourceView* ShadowMapSRV;
+    static D3D11_VIEWPORT ShadowMapViewport;
 
     FWString VertexShaderBufferKey = L"ShadowPassDepthRenderShader";
     FString TransformDataBufferKey = "ShadowTransformDataBufferKey";
     FString ViewProjTransformBufferKey = "ShadowViewProjTransformBufferKey"; // view->proj의 structuredbuffer index
     FString WorldTransformBufferKey = "ShadowWorldTransformBufferKey"; // staticmesh render할때 필요한 world trnasform
 
-    TMap<ULightComponentBase*, TArray<uint32>> IndicesMap; // LightComponentBase -> ShadowMaps/Transforms를 접근할때 광원에 해당하는 그림자맵의 index
+    static TMap<ULightComponentBase*, TArray<uint32>> IndicesMap; // LightComponentBase -> ShadowMaps/Transforms를 접근할때 광원에 해당하는 그림자맵의 index
     
 
 };

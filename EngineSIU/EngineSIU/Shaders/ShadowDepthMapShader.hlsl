@@ -40,5 +40,6 @@ VS_OUPUT mainVS(VS_INPUT_StaticMesh Input)
     Output.Position = mul(Output.Position, WorldMatrix);
     Output.Position = mul(Output.Position, ShadowTransforms[Index].ViewProj);
     
+    //Output.Position.z /= 10;
     return Output;
 }
