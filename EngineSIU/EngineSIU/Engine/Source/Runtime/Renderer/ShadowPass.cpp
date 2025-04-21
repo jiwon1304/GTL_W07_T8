@@ -265,7 +265,65 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
 
             IndicesMap[LightComponent].Add(Index);
             Transforms.Add(View * Proj);
+            Index++;
         }
+
+        static const FVector directions[6] = {
+            FVector(1, 0, 0),  // +X
+            FVector(0, 1, 0),  // +Y
+            FVector(0, 0, 1),  // +Z
+            FVector(-1, 0, 0), // -X
+            FVector(0, -1, 0), // -Y
+            FVector(0, 0, -1)  // -Z
+        };
+
+        if (UPointLightComponent* PointLight = Cast<UPointLightComponent>(LightComponent))
+        {
+            for (int side = 0; side < 6; side++)
+            {
+                FVector eye = PointLight->GetWorldLocation();
+                FVector target = eye + directions[side];
+                FVector up = FVector::UpVector;
+
+                if (side == 2 || side == 5)
+                {
+                    up = FVector::RightVector;
+                }
+
+                FMatrix View = JungleMath::CreateViewMatrix(eye, target, up);
+
+                FMatrix Proj = JungleMath::CreateProjectionMatrix(FMath::DegreesToRadians(90), 1, 0.1, 30.f);
+
+                IndicesMap[LightComponent].Add(Index);
+                Transforms.Add(View * Proj);
+                Index++;
+
+            }   
+        }
+
+        if (USpotLightComponent* SpotLight = Cast<USpotLightComponent>(LightComponent))
+        {
+            FVector eye = SpotLight->GetWorldLocation();
+            FVector target = eye + SpotLight->GetDirection();
+            FVector up = FVector::UpVector;
+
+            if (abs(SpotLight->GetDirection().Dot(up)) > 1 - FLT_EPSILON)
+            {
+                up = FVector::RightVector;
+            }
+
+            FMatrix View = JungleMath::CreateViewMatrix(eye, target, up);
+
+            float rad = SpotLight->GetOuterRad();
+            FMatrix Proj = JungleMath::CreateProjectionMatrix(rad, 1, 0.1f, SpotLight->GetRadius()); // 파라미터 받아서값 조절할 수 있게 만들기
+
+            IndicesMap[LightComponent].Add(Index);
+            Transforms.Add(View * Proj);
+            Index++;
+
+        }
+
+
         // index 부족하면 동적으로 늘리기
         // point spot은 나중에 작성
     }

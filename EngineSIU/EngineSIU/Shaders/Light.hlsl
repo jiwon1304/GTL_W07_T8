@@ -228,10 +228,10 @@ float CalculateShadowFactor(
     
  
     // PCF
-    // ShadowFactor = FilterPCF(ShadowUV, TexelSize, DepthReceiver, ShadowIndex);
+    //ShadowFactor = FilterPCF(ShadowUV, TexelSize, DepthReceiver, ShadowIndex);
     
     // Poisson Filter
-    // ShadowFactor = FilterPoisson(ShadowUV, TexelSize, DepthReceiver, ShadowIndex);
+    //ShadowFactor = FilterPoisson(ShadowUV, TexelSize, DepthReceiver, ShadowIndex);
     
     // VSM
     // ShadowFactor = FilterVSM(ShadowUV, DepthReceiver, ShadowIndex);
@@ -353,7 +353,7 @@ float4 SpotLight(int Index, float3 WorldPosition, float3 WorldNormal, float3 Wor
             LightDir
         );
     }
-    
+     
 #ifdef LIGHTING_MODEL_LAMBERT
     float3 Lit = DiffuseFactor * DiffuseColor * ShadowFactor * LightInfo.LightColor.rgb;
 #else
