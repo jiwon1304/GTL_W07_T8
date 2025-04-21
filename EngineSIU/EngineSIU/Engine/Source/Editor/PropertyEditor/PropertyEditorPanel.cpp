@@ -589,6 +589,8 @@ void PropertyEditorPanel::RenderForMaterial(UStaticMeshComponent* StaticMeshComp
             IsCreateMaterial = true;
         }
 
+
+
         ImGui::TreePop();
     }
 
@@ -625,6 +627,18 @@ void PropertyEditorPanel::RenderForMaterial(UStaticMeshComponent* StaticMeshComp
     }
     if (IsCreateMaterial) {
         RenderCreateMaterialView();
+    }
+
+    if (ImGui::TreeNodeEx("Textures", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
+    {
+
+        for (uint32 i = 0; i < StaticMeshComp->GetNumMaterials(); ++i)
+        {
+            UMaterial* Material = StaticMeshComp->GetMaterial(i);
+
+            RenderMaterialTexture(Material);
+        }
+        ImGui::TreePop();
     }
 }
 
@@ -836,6 +850,41 @@ void PropertyEditorPanel::RenderCreateMaterialView()
 
     ImGui::End();
 }
+
+void PropertyEditorPanel::RenderMaterialTexture(UMaterial* InMaterial)
+{
+    const FObjMaterialInfo& MaterialInfo = InMaterial->GetMaterialInfo();
+
+    std::shared_ptr<FTexture> Texture = 
+        GEngineLoop.ResourceManager.GetTexture(MaterialInfo.DiffuseTexturePath);
+
+    if(!Texture)
+    { 
+        return;
+    }
+
+    ID3D11ShaderResourceView* SRV;
+    SRV = Texture.get()->TextureSRV;
+    
+    int size_needed = WideCharToMultiByte(
+        CP_UTF8, 0, MaterialInfo.DiffuseTexturePath.c_str(), -1, nullptr, 0, nullptr, nullptr
+    );
+
+    std::string result(size_needed, 0);
+
+    WideCharToMultiByte(
+        CP_UTF8, 0, MaterialInfo.DiffuseTexturePath.c_str(), -1, &result[0], size_needed, nullptr, nullptr
+    );
+
+    float RegionWidth = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
+    float aspect = Texture.get()->Height / (float)Texture.get()->Width;
+    //ImGui::Begin("DirectX11 Texture Test");
+    ImGui::TextWrapped("%s ( %d x %d)", result.c_str(), Texture.get()->Width, Texture.get()->Height);
+    ImGui::Image((ImTextureID)(intptr_t)SRV, ImVec2(RegionWidth, aspect * RegionWidth));
+    
+    //ImGui::End();
+}
+
 
 void PropertyEditorPanel::OnResize(HWND hWnd)
 {

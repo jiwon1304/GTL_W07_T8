@@ -830,6 +830,7 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="UberLit.hlsl">
+    <FxCompile Include="Shaders\UberLit.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\FogShader.hlsl" />
