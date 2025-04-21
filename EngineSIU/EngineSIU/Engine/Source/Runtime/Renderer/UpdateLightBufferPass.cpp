@@ -12,6 +12,7 @@
 #include "Engine/EditorEngine.h"
 #include "GameFramework/Actor.h"
 #include "UObject/UObjectIterator.h"
+#include "ShadowPass.h"
 
 //------------------------------------------------------------------------------
 // 생성자/소멸자
@@ -112,6 +113,8 @@ void FUpdateLightBufferPass::UpdateLightBuffer() const
         {
             LightBufferData.Directional[DirectionalLightsCount] = Light->GetDirectionalLightInfo();
             LightBufferData.Directional[DirectionalLightsCount].Direction = Light->GetDirection();
+            LightBufferData.Directional[DirectionalLightsCount].Index = FShadowPass::GetShadowMapIndex(Light)[0];
+            LightBufferData.Directional[DirectionalLightsCount].CastShadow = 1; // Ture;
             DirectionalLightsCount++;
         }
     }

@@ -18,6 +18,11 @@ struct FDirectionalLightInfo
 
     FVector Direction;   // 정규화된 광선 방향 (월드 공간 기준)
     float   Intensity;   // 밝기
+
+    int     Index; 
+    int     CastShadow; // 그림자 생성 여부
+    float   Pad1;
+    float   Pad2;
 };
 
 struct FPointLightInfo

@@ -17,6 +17,8 @@ protected:
 
     FBoundingBox AABB;
 
+
+
 public:
     FBoundingBox GetBoundingBox() const {return AABB;}
 };

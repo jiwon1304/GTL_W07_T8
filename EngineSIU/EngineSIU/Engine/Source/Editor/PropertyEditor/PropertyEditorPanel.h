@@ -44,6 +44,9 @@ private:
     void RenderForMaterial(UStaticMeshComponent* StaticMeshComp);
     void RenderMaterialView(UMaterial* Material);
     void RenderCreateMaterialView();
+    void RenderMaterialTexture(UMaterial* InMaterial);
+    void RenderLightShadowMap(class ULightComponentBase* InLightComponent);
+
 private:
     float Width = 0, Height = 0;
     FVector Location = FVector(0, 0, 0);
