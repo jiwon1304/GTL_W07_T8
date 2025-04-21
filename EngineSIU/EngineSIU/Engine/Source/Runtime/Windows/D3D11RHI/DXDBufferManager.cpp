@@ -76,6 +76,118 @@ void FDXDBufferManager::BindConstantBuffer(const FString& Key, UINT StartSlot, E
         DXDeviceContext->PSSetConstantBuffers(StartSlot, 1, &Buffer);
 }
 
+HRESULT FDXDBufferManager::CreateStructuredBuffer(const FString& KeyName, UINT byteWidth, UINT bindFlags, D3D11_USAGE usage, UINT cpuAccessFlags, UINT Stride, UINT numElements)
+{
+    if (StructuredBufferPool.Contains(KeyName))
+    {
+        return S_OK;
+    }
+
+    if (byteWidth != Stride * numElements)
+    {
+        UE_LOG(LogLevel::Warning, TEXT("Structuredbuffer is not packed. This can can be intended."));
+    }
+
+    if ((bindFlags & D3D11_BIND_SHADER_RESOURCE || bindFlags & D3D11_BIND_UNORDERED_ACCESS) == false)
+    {
+        UE_LOG(LogLevel::Warning, TEXT("Structuredbuffer creates no view."));
+    }
+    FStructuredBufferResources Resources;
+
+    byteWidth = Align16(byteWidth);
+
+    D3D11_BUFFER_DESC desc = {};
+    desc.ByteWidth = byteWidth;
+    desc.Usage = usage;
+    desc.BindFlags = bindFlags;
+    desc.CPUAccessFlags = cpuAccessFlags;
+    desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+    desc.StructureByteStride = Stride;
+
+    ID3D11Buffer* buffer = nullptr;
+    HRESULT hr = DXDevice->CreateBuffer(&desc, nullptr, &buffer);
+    if (FAILED(hr))
+    {
+        UE_LOG(LogLevel::Error, TEXT("Error Create Structured Buffer!"));
+        return hr;
+    }
+    Resources.Buffer = buffer;
+
+    ID3D11ShaderResourceView* SRV = nullptr;
+    if (bindFlags & D3D11_BIND_SHADER_RESOURCE)
+    {
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+        srvDesc.Buffer.FirstElement = 0;
+        srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+        srvDesc.Buffer.NumElements = numElements;
+        hr = DXDevice->CreateShaderResourceView(buffer, &srvDesc, &SRV);
+        if (FAILED(hr))
+        {
+            UE_LOG(LogLevel::Error, TEXT("Error Create SRV from Structured Buffer!"));
+            return hr;
+        }
+    }
+    Resources.SRV = SRV;
+
+    ID3D11UnorderedAccessView* UAV = nullptr;
+    if (bindFlags & D3D11_BIND_UNORDERED_ACCESS)
+    {
+        D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+        uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+        uavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+        uavDesc.Buffer.FirstElement = 0;
+        uavDesc.Buffer.NumElements = numElements;
+
+        hr = DXDevice->CreateUnorderedAccessView(buffer, &uavDesc, &UAV);
+        if (FAILED(hr))
+        {
+            UE_LOG(LogLevel::Error, TEXT("Error Create UAV from Structured Buffer!"));
+            return hr;
+        }
+    }
+    Resources.UAV = UAV;
+
+    StructuredBufferPool.Add(KeyName, Resources);
+    return S_OK;
+}
+
+void FDXDBufferManager::BindStructuredBuffer(const FString& Key, UINT StartSlot, EShaderStage Stage, EShaderViewType ViewType) const
+{
+   if (ViewType == EShaderViewType::SRV)
+   {
+       if (ID3D11ShaderResourceView* SRV = GetStructuredBufferSRV(Key))
+       {
+           if (Stage == EShaderStage::Vertex)
+           {
+               DXDeviceContext->VSSetShaderResources(StartSlot, 1, &SRV);
+           }
+           else if (Stage == EShaderStage::Pixel)
+           {
+               DXDeviceContext->PSSetShaderResources(StartSlot, 1, &SRV);
+           }
+           else if (Stage == EShaderStage::Compute)
+           {
+               DXDeviceContext->CSSetShaderResources(StartSlot, 1, &SRV);
+           }
+       }
+   }
+   else if (ViewType == EShaderViewType::UAV)
+   {
+       if (ID3D11UnorderedAccessView* UAV = GetStructuredBufferUAV(Key))
+       {
+           if (Stage == EShaderStage::Compute)
+           {
+               DXDeviceContext->CSSetUnorderedAccessViews(StartSlot, 1, &UAV, nullptr);
+           }
+           else
+           {
+               UE_LOG(LogLevel::Error, TEXT("Cannot bind UAV to vertex / pixel shader!"));
+           }
+       }
+   }
+}
+
 FVertexInfo FDXDBufferManager::GetVertexBuffer(const FString& InName) const
 {
     if (VertexBufferPool.Contains(InName))
@@ -111,6 +223,30 @@ ID3D11Buffer* FDXDBufferManager::GetConstantBuffer(const FString& InName) const
 {
     if (ConstantBufferPool.Contains(InName))
         return ConstantBufferPool[InName];
+
+    return nullptr;
+}
+
+ID3D11Buffer* FDXDBufferManager::GetStructuredBuffer(const FString& InName) const
+{
+    if (StructuredBufferPool.Contains(InName))
+        return StructuredBufferPool[InName].Buffer;
+
+    return nullptr;
+}
+
+ID3D11ShaderResourceView* FDXDBufferManager::GetStructuredBufferSRV(const FString& InName) const
+{
+    if (StructuredBufferPool.Contains(InName))
+        return StructuredBufferPool[InName].SRV;
+
+    return nullptr;
+}
+
+ID3D11UnorderedAccessView* FDXDBufferManager::GetStructuredBufferUAV(const FString& InName) const
+{
+    if (StructuredBufferPool.Contains(InName))
+        return StructuredBufferPool[InName].UAV;
 
     return nullptr;
 }

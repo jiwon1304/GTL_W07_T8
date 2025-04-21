@@ -14,12 +14,24 @@
 enum class EShaderStage
 {
     Vertex,
-    Pixel
+    Pixel,
+    Compute
+};
+enum class EShaderViewType
+{
+    SRV,
+    UAV,
 };
 struct QuadVertex
 {
     float Position[3];
     float TexCoord[2];
+};
+struct FStructuredBufferResources
+{
+    ID3D11Buffer* Buffer;
+    ID3D11ShaderResourceView* SRV;
+    ID3D11UnorderedAccessView* UAV;
 };
 
 class FDXDBufferManager
@@ -72,6 +84,12 @@ public:
     void BindConstantBuffers(const TArray<FString>& Keys, UINT StartSlot, EShaderStage Stage) const;
     void BindConstantBuffer(const FString& Key, UINT StartSlot, EShaderStage Stage) const;
 
+   HRESULT CreateStructuredBuffer(const FString& KeyName, UINT byteWidth, UINT bindFlags, D3D11_USAGE usage, UINT cpuAccessFlags, UINT Stride, UINT numElements);
+
+    template<typename T>
+    void UpdateStructuredBuffer(const FString& KeyName, const TArray<T>& data);
+    void BindStructuredBuffer(const FString& Key, UINT StartSlot, EShaderStage Stage, EShaderViewType ViewType) const;
+
     template<typename T>
     static void SafeRelease(T*& comObject);
 
@@ -81,6 +99,9 @@ public:
     FVertexInfo GetTextVertexBuffer(const FWString& InName) const;
     FIndexInfo GetTextIndexBuffer(const FWString& InName) const;
     ID3D11Buffer* GetConstantBuffer(const FString& InName) const;
+    ID3D11Buffer* GetStructuredBuffer(const FString& InName) const;
+    ID3D11ShaderResourceView* GetStructuredBufferSRV(const FString& InName) const;
+    ID3D11UnorderedAccessView* GetStructuredBufferUAV(const FString& InName) const;
 
     void GetQuadBuffer(FVertexInfo& OutVertexInfo, FIndexInfo& OutIndexInfo);
     void GetTextBuffer(const FWString& Text, FVertexInfo& OutVertexInfo, FIndexInfo& OutIndexInfo);
@@ -95,6 +116,7 @@ private:
     TMap<FString, FVertexInfo> VertexBufferPool;
     TMap<FString, FIndexInfo> IndexBufferPool;
     TMap<FString, ID3D11Buffer*> ConstantBufferPool;
+    TMap<FString, FStructuredBufferResources> StructuredBufferPool;
 
     TMap<FWString, FBufferInfo> TextAtlasBufferPool;
     TMap<FWString, FVertexInfo> TextAtlasVertexBufferPool;
@@ -320,6 +342,99 @@ void FDXDBufferManager::UpdateDynamicVertexBuffer(const FString& KeyName, const 
 
     memcpy(mapped.pData, vertices.GetData(), sizeof(T) * vertices.Num());
     DXDeviceContext->Unmap(vbInfo.VertexBuffer, 0);
+}
+
+/*
+* 예시
+    D3D11_BUFFER_DESC BufferDesc;
+    BufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+    BufferDesc.ByteWidth = sizeof(FCone) * NumCones;
+    BufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    BufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    BufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+    BufferDesc.StructureByteStride = sizeof(FCone);
+*/
+//template<typename T>
+//inline HRESULT FDXDBufferManager::CreateStructuredBuffer(const FString& KeyName,
+//    UINT byteWidth, UINT bindFlags, D3D11_USAGE usage, UINT cpuAccessFlags, const TArray<T>& data)
+//{
+//    if (StructuredBufferPool.Contains(KeyName))
+//    {
+//        return S_OK;
+//    }
+//    
+//    FStructuredBufferResources Resources;
+//
+//    byteWidth = Align16(byteWidth);
+//
+//    D3D11_BUFFER_DESC desc = {};
+//    desc.ByteWidth = byteWidth;
+//    desc.Usage = usage;
+//    desc.BindFlags = bindFlags;
+//    desc.CPUAccessFlags = cpuAccessFlags;
+//    desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+//    desc.StructureByteStride = sizeof(T);
+//
+//    D3D11_SUBRESOURCE_DATA initData = {};
+//    initData.pSysMem = data.GetData();
+//
+//    ID3D11Buffer* buffer = nullptr;
+//    HRESULT hr = DXDevice->CreateBuffer(&desc, data.Num() != 0 ? &initData : nullptr, &buffer);
+//    if (FAILED(hr))
+//    {
+//        UE_LOG(LogLevel::Error, TEXT("Error Create Constant Buffer!"));
+//        return hr;
+//    }
+//    Resources.Buffer = buffer;
+//
+//    if (bindFlags | D3D11_BIND_SHADER_RESOURCE)
+//    {
+//        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+//        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+//        srvDesc.Buffer.FirstElement = 0;
+//        srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+//        srvDesc.Buffer.NumElements = MaxNumPointLight;
+//    }
+//
+//    StructuredBufferPool.Add(KeyName, buffer);
+//    return S_OK;
+//}
+
+template<typename T>
+inline void FDXDBufferManager::UpdateStructuredBuffer(const FString& KeyName, const TArray<T>& data)
+{
+    if (!StructuredBufferPool.Contains(KeyName))
+    {
+        UE_LOG(LogLevel::Error, TEXT("UpdateStructuredBuffer 호출: 키 %s에 해당하는 버텍스 버퍼가 없습니다."), *KeyName);
+        return;
+    }
+
+    // 버퍼 크기 확인
+    ID3D11Buffer* Buffer = StructuredBufferPool[KeyName].Buffer;
+    D3D11_BUFFER_DESC Desc;
+    Buffer->GetDesc(&Desc);
+    uint32 BufferNum = Desc.ByteWidth / sizeof(T);
+    
+    if (data.Num() > BufferNum)
+    {
+        UE_LOG(LogLevel::Warning, TEXT("UpdateStructuredBuffer 호출: 업데이트하려는 배열의 크기가 버퍼의 크기보다 큽니다. %d개 중 %d만 업데이트합니다."), *KeyName, data.Num(), BufferNum);
+    }
+    // 생성 시보다 적은 개수가 들어옴
+    else
+    {
+        BufferNum = data.Num();
+    }
+
+    D3D11_MAPPED_SUBRESOURCE mapped;
+    HRESULT hr = DXDeviceContext->Map(Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+    if (FAILED(hr))
+    {
+        UE_LOG(LogLevel::Error, TEXT("StructuedBuffer Map 실패, HRESULT: 0x%X"), hr);
+        return;
+    }
+
+    memcpy(mapped.pData, data.GetData(), sizeof(T) * BufferNum);
+    DXDeviceContext->Unmap(Buffer, 0);
 }
 
 template<typename T>

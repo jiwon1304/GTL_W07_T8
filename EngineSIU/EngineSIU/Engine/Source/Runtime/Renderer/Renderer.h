@@ -39,6 +39,7 @@ class FFogRenderPass;
 class FCompositingPass;
 class FSlateRenderPass;
 class FEditorRenderPass;
+class FShadowPass;
 
 class FRenderer
 {
@@ -91,6 +92,7 @@ public:
     FWorldBillboardRenderPass* WorldBillboardRenderPass = nullptr;
     FEditorBillboardRenderPass* EditorBillboardRenderPass = nullptr;
     FGizmoRenderPass* GizmoRenderPass = nullptr;
+    FShadowPass* ShadowPass = nullptr;
     FUpdateLightBufferPass* UpdateLightBufferPass = nullptr;
     FLineRenderPass* LineRenderPass = nullptr;
     FFogRenderPass* FogRenderPass = nullptr;
@@ -100,6 +102,17 @@ public:
     FPostProcessCompositingPass* PostProcessCompositingPass = nullptr;
     
     FSlateRenderPass* SlateRenderPass = nullptr;
+
+    //TArray<class UStaticMeshComponent*> StaticMeshObjects;
+    //TArray<class ULightComponentBase*> LightObjects;
+
+    //struct ShadowData
+    //{
+    //    FMatrix ViewProjectionMatrix;
+    //    uint32 ShadowMapArrayIndex;
+    //};
+
+    //static TMap<ULightComponentBase*, TArray<ShadowData>> ShadowDataMap;
 };
 
 template<typename T>

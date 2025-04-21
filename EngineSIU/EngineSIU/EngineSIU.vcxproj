@@ -290,6 +290,7 @@
     <ClCompile Include="Engine\Source\ThirdParty\include\ImGUI\imgui_widgets.cpp" />
     <ClCompile Include="Engine\Source\ThirdParty\tinyfiledialogs\tinyfiledialogs.cpp" />
     <ClCompile Include="LightGridGenerator.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Renderer\ShadowPass.cpp" />
     <None Include="Shaders\CompositingShader.hlsl" />
     <None Include="Shaders\DepthBufferPixelShader.hlsl" />
     <None Include="Shaders\DepthBufferVertexShader.hlsl" />
@@ -450,6 +451,7 @@
     <ClInclude Include="Engine\Source\Runtime\Windows\WindowsCursor.h" />
     <ClInclude Include="Engine\Source\Runtime\Windows\WindowsPlatformTime.h" />
     <ClInclude Include="LightGridGenerator.h" />
+    <ClInclude Include="Engine\Source\Runtime\Renderer\ShadowPass.h" />
     <None Include="Shaders\EditorShaderConstants.hlsli" />
     <None Include="Shaders\ShaderConstants.hlsli" />
   </ItemGroup>

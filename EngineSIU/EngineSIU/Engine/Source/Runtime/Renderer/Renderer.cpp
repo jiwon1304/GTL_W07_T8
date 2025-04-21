@@ -16,6 +16,7 @@
 #include "FogRenderPass.h"
 #include "SlateRenderPass.h"
 #include "EditorRenderPass.h"
+#include "ShadowPass.h"
 #include <UObject/UObjectIterator.h>
 #include <UObject/Casts.h>
 
@@ -44,6 +45,7 @@ void FRenderer::Initialize(FGraphicsDevice* InGraphics, FDXDBufferManager* InBuf
     WorldBillboardRenderPass = new FWorldBillboardRenderPass();
     EditorBillboardRenderPass = new FEditorBillboardRenderPass();
     GizmoRenderPass = new FGizmoRenderPass();
+    ShadowPass = new FShadowPass();
     UpdateLightBufferPass = new FUpdateLightBufferPass();
     LineRenderPass = new FLineRenderPass();
     FogRenderPass = new FFogRenderPass();
@@ -56,6 +58,7 @@ void FRenderer::Initialize(FGraphicsDevice* InGraphics, FDXDBufferManager* InBuf
     WorldBillboardRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
     EditorBillboardRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
     GizmoRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
+    ShadowPass->Initialize(BufferManager, Graphics, ShaderManager);
     UpdateLightBufferPass->Initialize(BufferManager, Graphics, ShaderManager);
     LineRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
     FogRenderPass->Initialize(BufferManager, Graphics, ShaderManager);
@@ -81,6 +84,7 @@ void FRenderer::Release()
     delete CompositingPass;
     delete PostProcessCompositingPass;
     delete SlateRenderPass;
+    delete ShadowPass;
 }
 
 //------------------------------------------------------------------------------
@@ -186,6 +190,7 @@ void FRenderer::PrepareRenderPass()
     UpdateLightBufferPass->PrepareRender();
     FogRenderPass->PrepareRender();
     EditorRenderPass->PrepareRender();
+    ShadowPass->PrepareRender();
 }
 
 void FRenderer::ClearRenderArr()
@@ -197,6 +202,7 @@ void FRenderer::ClearRenderArr()
     UpdateLightBufferPass->ClearRenderArr();
     FogRenderPass->ClearRenderArr();
     EditorRenderPass->ClearRenderArr();
+    ShadowPass->ClearRenderArr();
 }
 
 void FRenderer::UpdateCommonBuffer(const std::shared_ptr<FEditorViewportClient>& Viewport)
@@ -265,6 +271,7 @@ void FRenderer::RenderWorldScene(const std::shared_ptr<FEditorViewportClient>& V
     
     if (ShowFlag & EEngineShowFlags::SF_Primitives)
     {
+        ShadowPass->Render(Viewport);
         UpdateLightBufferPass->Render(Viewport);
         StaticMeshRenderPass->Render(Viewport);
     }

@@ -20,6 +20,14 @@ struct FShaderResource
     ID3D11InputLayout* Layout = nullptr;
     D3D11_PRIMITIVE_TOPOLOGY Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 };
+//
+//struct LightInfo
+//{
+//    ULightComponentBase* light;
+//    ID3D11Buffer* ShadowMap;
+//    ID3D11ShaderResourceView* ShadowMapSRV;
+//};
+
 
 
 struct FRenderResources
