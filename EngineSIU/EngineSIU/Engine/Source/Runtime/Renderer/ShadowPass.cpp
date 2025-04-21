@@ -24,6 +24,7 @@ TArray<ID3D11DepthStencilView*> FShadowPass::ShadowMapDSV;
 ID3D11ShaderResourceView* FShadowPass::ShadowMapSRV;
 TMap<ULightComponentBase*, TArray<uint32>> FShadowPass::IndicesMap;
 D3D11_VIEWPORT FShadowPass::ShadowMapViewport;
+ID3D11SamplerState* FShadowPass::ShadowMapSampler;
 
 void FShadowPass::Initialize(FDXDBufferManager* InBufferManager, FGraphicsDevice* InGraphics, FDXDShaderManager* InShaderManage)
 {
@@ -98,13 +99,9 @@ void FShadowPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
     }
 
     Graphics->DeviceContext->OMSetRenderTargets(0, nullptr ,nullptr);
+    Graphics->DeviceContext->PSSetSamplers(8, 1, &ShadowMapSampler);
     Graphics->DeviceContext->PSSetShaderResources(ShadowMapSRVSlot, 1, &ShadowMapSRV);
 }
-
-
-
-
-
 
 void FShadowPass::ClearRenderArr()
 {
@@ -122,6 +119,19 @@ HRESULT FShadowPass::CreateShader()
         {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"MATERIAL_INDEX", 0, DXGI_FORMAT_R32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
+
+    D3D11_SAMPLER_DESC SamplerDesc;
+    ZeroMemory(&SamplerDesc, sizeof(SamplerDesc));
+    SamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+    SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    SamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    SamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    SamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+    SamplerDesc.MinLOD = 0;
+    SamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+    ID3D11SamplerState* pShadowSampler;
+    Graphics->Device->CreateSamplerState(&SamplerDesc, &ShadowMapSampler);
 
     return ShaderManager->AddVertexShaderAndInputLayout(VertexShaderBufferKey, L"Shaders/ShadowDepthMapShader.hlsl", "mainVS", StaticMeshLayoutDesc, ARRAYSIZE(StaticMeshLayoutDesc));
 }

@@ -74,6 +74,7 @@ private:
     static TArray<ID3D11DepthStencilView*> ShadowMapDSV;
     static ID3D11ShaderResourceView* ShadowMapSRV;
     static D3D11_VIEWPORT ShadowMapViewport;
+    static ID3D11SamplerState* ShadowMapSampler;
 
     FWString VertexShaderBufferKey = L"ShadowPassDepthRenderShader";
     FString TransformDataBufferKey = "ShadowTransformDataBufferKey";
