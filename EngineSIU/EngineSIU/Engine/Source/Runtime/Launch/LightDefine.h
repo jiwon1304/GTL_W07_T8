@@ -19,7 +19,7 @@ struct FDirectionalLightInfo
     FVector Direction;   // 정규화된 광선 방향 (월드 공간 기준)
     float   Intensity;   // 밝기
 
-    int     Index; 
+    int     ShadowMapIndex; 
     int     CastShadow; // 그림자 생성 여부
     float   Pad1;
     float   Pad2;
@@ -35,7 +35,10 @@ struct FPointLightInfo
     int     Type;        // 라이트 타입 구분용 (예: 1 = Point)
     float   Intensity;   // 밝기
     float   Attenuation;
-    float   Padding;  // 16바이트 정렬
+    int     ShadowMapIndex;
+
+    int     CastShadow;
+    FVector Padding;
 };
 
 struct FSpotLightInfo
@@ -52,6 +55,10 @@ struct FSpotLightInfo
     float   InnerRad; // cos(inner angle)
     float   OuterRad; // cos(outer angle)
     float   Attenuation;
+
+    int     ShadowMapIndex;
+    int     CastShadow;
+    FVector2D Padding;
 };
 
 struct FLightInfoBuffer

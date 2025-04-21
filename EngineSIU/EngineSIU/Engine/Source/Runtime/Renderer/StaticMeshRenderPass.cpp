@@ -25,6 +25,8 @@
 
 #include "UnrealEd/EditorViewportClient.h"
 
+#include "ShadowPass.h"
+
 
 FStaticMeshRenderPass::FStaticMeshRenderPass()
     : VertexShader(nullptr)
@@ -207,6 +209,12 @@ void FStaticMeshRenderPass::PrepareRenderState(const std::shared_ptr<FEditorView
 
     D3D11_VIEWPORT DViewport = Viewport->GetViewportResource()->GetD3DViewport();
     Graphics->DeviceContext->RSSetViewports(1, &DViewport);
+
+    Graphics->DeviceContext->PSSetSamplers(8, 1, &FShadowPass::ShadowMapSampler);
+    Graphics->DeviceContext->VSSetSamplers(8, 1, &FShadowPass::ShadowMapSampler);
+    Graphics->DeviceContext->PSSetShaderResources(FShadowPass::ShadowMapSRVSlot, 1, &FShadowPass::ShadowMapSRV);
+    BufferManager->BindStructuredBuffer("ShadowTransformDataBufferKey", FShadowPass::TransformSRVSlot, EShaderStage::Pixel, EShaderViewType::SRV); // 실제 matrix
+
 }
 
 void FStaticMeshRenderPass::UpdateObjectConstant(const FMatrix& WorldMatrix, const FVector4& UUIDColor, bool bIsSelected) const

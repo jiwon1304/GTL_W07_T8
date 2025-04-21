@@ -58,6 +58,7 @@ void FShadowPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
     BufferManager->BindStructuredBuffer(TransformDataBufferKey, TransformSRVSlot, EShaderStage::Vertex, EShaderViewType::SRV); // 실제 matrix
     BufferManager->BindConstantBuffer(ViewProjTransformBufferKey, ViewProjTransformCBSlot, EShaderStage::Vertex); // index만
     BufferManager->BindConstantBuffer(WorldTransformBufferKey, WorldTransformCBSlot, EShaderStage::Vertex); // worldmatrix
+    Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     Graphics->DeviceContext->RSSetViewports(1, &ShadowMapViewport);
     for (const auto& Pair : IndicesMap)
     {
@@ -99,8 +100,7 @@ void FShadowPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
     }
 
     Graphics->DeviceContext->OMSetRenderTargets(0, nullptr ,nullptr);
-    Graphics->DeviceContext->PSSetSamplers(8, 1, &ShadowMapSampler);
-    Graphics->DeviceContext->PSSetShaderResources(ShadowMapSRVSlot, 1, &ShadowMapSRV);
+
 }
 
 void FShadowPass::ClearRenderArr()
@@ -123,12 +123,16 @@ HRESULT FShadowPass::CreateShader()
     D3D11_SAMPLER_DESC SamplerDesc;
     ZeroMemory(&SamplerDesc, sizeof(SamplerDesc));
     SamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
-    SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-    SamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-    SamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    SamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+    SamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+    SamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
     SamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
     SamplerDesc.MinLOD = 0;
     SamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+    SamplerDesc.BorderColor[0] = 1.0f;
+    SamplerDesc.BorderColor[1] = 1.0f;
+    SamplerDesc.BorderColor[2] = 1.0f;
+    SamplerDesc.BorderColor[3] = 1.0f;
 
     ID3D11SamplerState* pShadowSampler;
     Graphics->Device->CreateSamplerState(&SamplerDesc, &ShadowMapSampler);

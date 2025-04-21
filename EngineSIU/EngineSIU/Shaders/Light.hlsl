@@ -89,7 +89,11 @@ static const float2 PoissonSamples[32] =
     float2(0.506965, -0.761049), float2(0.322733, -0.925850)
 };
 
-StructuredBuffer<float4x4> LigthViewProjection : register(t9);
+struct MatrixTransposed
+{
+    row_major matrix TransposedMat;
+};
+StructuredBuffer<MatrixTransposed> LigthViewProjection : register(t9);
 
 // [TEMP] ShadowMap Slot / Comparison Sampler Slot 미정
 Texture2DArray<float> ShadowMapArray : register(t8);
@@ -192,6 +196,7 @@ float CalculateShadowFactor(
     float3 Normal,
     float3 LightDir)
 {
+    //return 1.f;
     // World to Light perspective
     float4 LightSpacePos = mul(float4(WorldPos, 1.0), LightViewProjection);
     LightSpacePos.xyz /= LightSpacePos.w;
@@ -213,13 +218,14 @@ float CalculateShadowFactor(
     // Filtering 적용
     // No filtering - Hard Shadow
     if (any(ShadowUV < 0.0 || ShadowUV > 1.0)) 
-        return 0.0f;
+        return 1.0f; // 밖은 무조건 lit되게 수정
     
     ShadowFactor = ShadowMapArray.SampleCmpLevelZero(
         ShadowSampler,
         float3(ShadowUV, ShadowIndex),
         DepthReceiver
     );
+    
  
     // PCF
     // ShadowFactor = FilterPCF(ShadowUV, TexelSize, DepthReceiver, ShadowIndex);
@@ -340,7 +346,7 @@ float4 SpotLight(int Index, float3 WorldPosition, float3 WorldNormal, float3 Wor
     if (LightInfo.CastsShadows)
     {
         ShadowFactor = CalculateShadowFactor(
-            LigthViewProjection[LightInfo.ShadowMapIndex],
+            LigthViewProjection[LightInfo.ShadowMapIndex].TransposedMat,
             LightInfo.ShadowMapIndex,
             WorldPosition,
             WorldNormal,
@@ -373,7 +379,7 @@ float4 DirectionalLight(int nIndex, float3 WorldPosition, float3 WorldNormal, fl
     if (LightInfo.CastsShadows)
     {
         ShadowFactor = CalculateShadowFactor(
-            LigthViewProjection[LightInfo.ShadowMapIndex],
+            LigthViewProjection[LightInfo.ShadowMapIndex].TransposedMat,
             LightInfo.ShadowMapIndex,
             WorldPosition,
             WorldNormal,

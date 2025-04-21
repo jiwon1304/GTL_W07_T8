@@ -60,28 +60,32 @@ private:
     class FGraphicsDevice* Graphics;
 
     class FDXDShaderManager* ShaderManager;
-
+public:
     static const uint32 ShadowMapSRVSlot = 8;
     static const uint32 TransformSRVSlot = 9;
     static const uint32 ViewProjTransformCBSlot = 10;
     static const uint32 WorldTransformCBSlot = 9;
 
+private:
     TArray<class UStaticMeshComponent*> StaticMeshComponents;
 
     uint32 TextureSize = 1024; // initial value
     uint32 NumShadowMaps = 8; // initial value
-    static ID3D11Texture2D* ShadowMapTexture;
-    static TArray<ID3D11DepthStencilView*> ShadowMapDSV;
-    static ID3D11ShaderResourceView* ShadowMapSRV;
-    static D3D11_VIEWPORT ShadowMapViewport;
-    static ID3D11SamplerState* ShadowMapSampler;
 
     FWString VertexShaderBufferKey = L"ShadowPassDepthRenderShader";
     FString TransformDataBufferKey = "ShadowTransformDataBufferKey";
     FString ViewProjTransformBufferKey = "ShadowViewProjTransformBufferKey"; // view->proj의 structuredbuffer index
     FString WorldTransformBufferKey = "ShadowWorldTransformBufferKey"; // staticmesh render할때 필요한 world trnasform
 
+public:
+    static ID3D11Texture2D* ShadowMapTexture;
+    static TArray<ID3D11DepthStencilView*> ShadowMapDSV;
+    static ID3D11ShaderResourceView* ShadowMapSRV;
+    static D3D11_VIEWPORT ShadowMapViewport;
+    static ID3D11SamplerState* ShadowMapSampler;
+
     static TMap<ULightComponentBase*, TArray<uint32>> IndicesMap; // LightComponentBase -> ShadowMaps/Transforms를 접근할때 광원에 해당하는 그림자맵의 index
+
     
 
 };
