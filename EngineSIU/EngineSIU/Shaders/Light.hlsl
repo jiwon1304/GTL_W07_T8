@@ -42,7 +42,6 @@ struct FPointLightInfo
     
     // [TEMP] 추후 들어오는 값에 따라 바뀔 수 있음
     int ShadowMapIndex; // 텍스처 배열 시작 인덱스
-    
     int CastsShadows;
     float3 Padding;
 };
@@ -139,8 +138,8 @@ float FilterPoisson(
     float TexelSize,
     float DepthRecevier,
     int ShadowIndex,
-    float Spread = 1.0,
-    int SampleCount = 16)
+    float Spread = 2.0,
+    int SampleCount = 32)
 {
     float ShadowFactor = 0.0;
     
