@@ -129,6 +129,12 @@ cbuffer Lighting : register(b0)
     int AmbientLightsCount;
 };
 
+cbuffer ShadowConfigurations : register(b8)
+{
+    int ShadowFilterMode;
+    float3 Padding;
+};
+
 StructuredBuffer<FAmbientLightInfo> AmbientLights : register(t20);
 StructuredBuffer<FDirectionalLightInfo> DirectionalLights : register(t21);
 StructuredBuffer<FSpotLightInfo> SpotLights : register(t22);
@@ -263,10 +269,18 @@ float CalculateShadowFactor(
     if (any(ShadowUV < 0.0 || ShadowUV > 1.0)) 
         return 1.0f; // 텍스쳐 경계 바깥 Lit
 
-    int FilterMode = 1;
-
-    switch (FilterMode)
+    [branch]
+    switch (ShadowFilterMode)
     {
+        case 0:
+        {
+            ShadowFactor = ShadowMapArray.SampleCmpLevelZero(
+                ShadowSampler,
+                float3(ShadowUV, ShadowIndex),
+                DepthReceiver
+            );
+                break;
+            }
         case 1: // PCF
         {
             int KernelSize = lerp(9.0f, 1.0f, AdjustedSharpness);

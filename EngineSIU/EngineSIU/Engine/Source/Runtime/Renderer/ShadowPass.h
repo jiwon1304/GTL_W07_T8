@@ -10,6 +10,20 @@
 
 #include "Define.h"
 
+enum class EShadowFilterMethod : uint8
+{
+    NONE = 0,
+    PCF = 1,
+    POISSON = 2,
+    VSM = 3,
+};
+
+struct FShadowConfigurations
+{
+    int FilterMode;
+    FVector Padding;
+};
+
 class ULightComponentBase;
 
 class FShadowPass :
@@ -30,6 +44,7 @@ public:
 
     static TArray<uint32> GetShadowMapIndex(ULightComponentBase* InLightComponent) { return IndicesMap[InLightComponent]; }
 
+    void SetShadowFilterMode(EShadowFilterMethod InFilterMode);
 private:
     HRESULT CreateShader();
 
@@ -46,8 +61,6 @@ private:
     void UpdateCascadedShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport);
 
     void RenderPrimitive(OBJ::FStaticMeshRenderData* RenderData, TArray<class FStaticMaterial*> Materials, TArray<class UMaterial*> OverrideMaterials, int SelectedSubMeshIndex) const;
-
-
 
     class ID3D11VertexShader* VertexShader;
 
@@ -76,7 +89,9 @@ private:
     FString TransformDataBufferKey = "ShadowTransformDataBufferKey";
     FString ViewProjTransformBufferKey = "ShadowViewProjTransformBufferKey"; // view->proj의 structuredbuffer index
     FString WorldTransformBufferKey = "ShadowWorldTransformBufferKey"; // staticmesh render할때 필요한 world trnasform
+    FString ShadowConfigBufferKey = "ShadowConfigurations";
 
+    static EShadowFilterMethod CurrentShadowFilterMode;
 public:
     static ID3D11Texture2D* ShadowMapTexture;
     static TArray<ID3D11DepthStencilView*> ShadowMapDSV;
@@ -85,8 +100,5 @@ public:
     static ID3D11SamplerState* ShadowMapSampler;
 
     static TMap<ULightComponentBase*, TArray<uint32>> IndicesMap; // LightComponentBase -> ShadowMaps/Transforms를 접근할때 광원에 해당하는 그림자맵의 index
-
-    
-
 };
 

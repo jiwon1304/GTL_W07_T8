@@ -25,6 +25,7 @@ ID3D11ShaderResourceView* FShadowPass::ShadowMapSRV;
 TMap<ULightComponentBase*, TArray<uint32>> FShadowPass::IndicesMap;
 D3D11_VIEWPORT FShadowPass::ShadowMapViewport;
 ID3D11SamplerState* FShadowPass::ShadowMapSampler;
+EShadowFilterMethod FShadowPass::CurrentShadowFilterMode = EShadowFilterMethod::NONE;
 
 void FShadowPass::Initialize(FDXDBufferManager* InBufferManager, FGraphicsDevice* InGraphics, FDXDShaderManager* InShaderManage)
 {
@@ -55,6 +56,11 @@ void FShadowPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
     ShaderManager->SetVertexShaderAndInputLayout(VertexShaderBufferKey, Graphics->DeviceContext);
     ShaderManager->SetPixelShaderNull(Graphics->DeviceContext);
 
+    BufferManager->BindConstantBuffer(
+        ShadowConfigBufferKey,
+        8,
+        EShaderStage::Pixel
+    );
     BufferManager->BindStructuredBuffer(TransformDataBufferKey, TransformSRVSlot, EShaderStage::Vertex, EShaderViewType::SRV); // 실제 matrix
     BufferManager->BindConstantBuffer(ViewProjTransformBufferKey, ViewProjTransformCBSlot, EShaderStage::Vertex); // index만
     BufferManager->BindConstantBuffer(WorldTransformBufferKey, WorldTransformCBSlot, EShaderStage::Vertex); // worldmatrix
@@ -108,6 +114,19 @@ void FShadowPass::ClearRenderArr()
     StaticMeshComponents.Empty();
 }    
 
+
+void FShadowPass::SetShadowFilterMode(EShadowFilterMethod InFilterMode)
+{
+    CurrentShadowFilterMode = InFilterMode;
+
+    FShadowConfigurations Settings;
+    Settings.FilterMode = static_cast<int>(CurrentShadowFilterMode);
+
+    BufferManager->UpdateConstantBuffer(
+        ShadowConfigBufferKey,
+        Settings
+    );
+}
 
 HRESULT FShadowPass::CreateShader()
 {
@@ -222,6 +241,11 @@ HRESULT FShadowPass::CreateBuffer(uint32 NumTransforms)
     }
 
     hr = BufferManager->CreateBufferGeneric<FMatrix>(WorldTransformBufferKey, nullptr, sizeof(FMatrix), D3D11_BIND_CONSTANT_BUFFER, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+    if (FAILED(hr)) {
+        return hr;
+    }
+
+    hr = BufferManager->CreateBufferGeneric<FShadowConfigurations>(ShadowConfigBufferKey, nullptr, sizeof(FShadowConfigurations), D3D11_BIND_CONSTANT_BUFFER, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
     if (FAILED(hr)) {
         return hr;
     }

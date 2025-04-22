@@ -1,9 +1,9 @@
 #include "Console.h"
 #include <cstdarg>
 #include <cstdio>
-
+#include "Runtime/Renderer/ShadowPass.h"
 #include "UnrealEd/EditorViewportClient.h"
-
+#include "Runtime/Launch/EngineLoop.h"
 
 void StatOverlay::ToggleStat(const std::string& command)
 {
@@ -252,6 +252,34 @@ void Console::ExecuteCommand(const std::string& command)
     }
     else if (command.starts_with("stat ")) { // stat 명령어 처리
         overlay.ToggleStat(command);
+    }
+    else if (command.starts_with("shadow_filter "))
+    {
+        std::string mode = command.substr(14);
+        if (mode == "NONE")
+        {
+            FEngineLoop::Renderer.ShadowPass->SetShadowFilterMode(EShadowFilterMethod::NONE);
+            UE_LOG(LogLevel::Display, "Shadow filter: NONE");
+        }
+        else if (mode == "PCF")
+        {
+            FEngineLoop::Renderer.ShadowPass->SetShadowFilterMode(EShadowFilterMethod::PCF);
+            UE_LOG(LogLevel::Display, "Shadow filter: PCF");
+        }
+        else if (mode == "POISSON")
+        {
+            FEngineLoop::Renderer.ShadowPass->SetShadowFilterMode(EShadowFilterMethod::POISSON);
+            UE_LOG(LogLevel::Display, "Shadow filter: Poisson");
+        }
+        else if (mode == "VSM")
+        {
+            FEngineLoop::Renderer.ShadowPass->SetShadowFilterMode(EShadowFilterMethod::VSM);
+            UE_LOG(LogLevel::Display, "Shadow filter: VSM");
+        }
+        else
+        {
+            UE_LOG(LogLevel::Error, "Invalid shadow filter mode");
+        }
     }
     else {
         AddLog(LogLevel::Error, "Unknown command: %s", command.c_str());
