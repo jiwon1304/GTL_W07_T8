@@ -292,7 +292,7 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
 
                 FMatrix View = JungleMath::CreateViewMatrix(eye, target, up);
 
-                FMatrix Proj = JungleMath::CreateProjectionMatrix(FMath::DegreesToRadians(90), 1, 0.1, 30.f);
+                FMatrix Proj = JungleMath::CreateProjectionMatrix(FMath::DegreesToRadians(90), 1, 0.1, PointLight->GetRadius());
 
                 IndicesMap[LightComponent].Add(Index);
                 Transforms.Add(View * Proj);

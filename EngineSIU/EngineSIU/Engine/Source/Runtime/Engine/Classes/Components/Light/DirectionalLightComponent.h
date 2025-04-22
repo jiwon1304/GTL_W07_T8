@@ -9,6 +9,7 @@ class UDirectionalLightComponent : public ULightComponentBase
 public:
     UDirectionalLightComponent();
     virtual ~UDirectionalLightComponent() override;
+    UObject* Duplicate(UObject* InOuter);
     FVector GetDirection();
 
     const FDirectionalLightInfo& GetDirectionalLightInfo() const;

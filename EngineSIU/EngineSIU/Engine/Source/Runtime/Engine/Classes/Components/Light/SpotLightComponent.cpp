@@ -1,6 +1,8 @@
 #include "SpotLightComponent.h"
 #include "Math/Rotator.h"
 #include "Math/Quat.h"
+#include "UObject/Casts.h"
+
 USpotLightComponent::USpotLightComponent()
 {
     SpotLightInfo.Position = GetWorldLocation();
@@ -16,6 +18,15 @@ USpotLightComponent::USpotLightComponent()
 
 USpotLightComponent::~USpotLightComponent()
 {
+}
+
+UObject* USpotLightComponent::Duplicate(UObject* InOuter)
+{
+    ThisClass* NewComponent = Cast<ThisClass>(Super::Duplicate(InOuter));
+
+    NewComponent->SpotLightInfo = SpotLightInfo;
+
+    return NewComponent;
 }
 
 FVector USpotLightComponent::GetDirection()

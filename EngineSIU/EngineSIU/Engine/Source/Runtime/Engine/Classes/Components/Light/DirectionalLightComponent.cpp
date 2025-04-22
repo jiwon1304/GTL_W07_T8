@@ -2,6 +2,7 @@
 #include "Components/SceneComponent.h"
 #include "Math/Rotator.h"
 #include "Math/Quat.h"
+#include "UObject/Casts.h"
 
 UDirectionalLightComponent::UDirectionalLightComponent()
 {
@@ -16,6 +17,14 @@ UDirectionalLightComponent::~UDirectionalLightComponent()
 {
 }
 
+UObject* UDirectionalLightComponent::Duplicate(UObject* InOuter)
+{
+    ThisClass* NewComponent = Cast<ThisClass>(Super::Duplicate(InOuter));
+
+    NewComponent->DirectionalLightInfo = DirectionalLightInfo;
+
+    return NewComponent;
+}
 
 FVector UDirectionalLightComponent::GetDirection()  
 {

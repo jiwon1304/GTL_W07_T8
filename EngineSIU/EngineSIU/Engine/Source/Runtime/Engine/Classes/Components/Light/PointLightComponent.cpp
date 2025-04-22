@@ -1,4 +1,5 @@
 #include "PointLightComponent.h"
+#include "UObject/Casts.h"
 
 UPointLightComponent::UPointLightComponent()
 {
@@ -14,6 +15,15 @@ UPointLightComponent::UPointLightComponent()
 
 UPointLightComponent::~UPointLightComponent()
 {
+}
+
+UObject* UPointLightComponent::Duplicate(UObject* InOuter)
+{
+    ThisClass* NewComponent = Cast<ThisClass>(Super::Duplicate(InOuter));
+
+    NewComponent->PointLightInfo = PointLightInfo;
+
+    return NewComponent;
 }
 
 const FPointLightInfo& UPointLightComponent::GetPointLightInfo() const

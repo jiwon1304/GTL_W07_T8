@@ -170,6 +170,7 @@ void PropertyEditorPanel::Render()
                     pointlightObj->SetRadius(Radius);
                 }
 
+                RenderLightShadowMap(pointlightObj);
 
                 ImGui::TreePop();
             }
@@ -210,6 +211,9 @@ void PropertyEditorPanel::Render()
                     spotlightObj->SetOuterDegree(OuterDegree);
                 }
 
+                RenderLightShadowMap(spotlightObj);
+
+
                 ImGui::TreePop();
             }
 
@@ -234,13 +238,10 @@ void PropertyEditorPanel::Render()
                 LightDirection = dirlightObj->GetDirection();
                 FImGuiWidget::DrawVec3Control("Direction", LightDirection, 0, 85);
 
-                //RenderLightShadowMap(dirlightObj);
+                RenderLightShadowMap(dirlightObj);
 
                 ImGui::TreePop();
             }
-
-
-
 
             ImGui::PopStyleColor();
         }
@@ -893,16 +894,75 @@ void PropertyEditorPanel::RenderMaterialTexture(UMaterial* InMaterial)
 
 void PropertyEditorPanel::RenderLightShadowMap(ULightComponentBase* InLightComponent)
 {
-    ID3D11ShaderResourceView* SRV = FShadowPass::GetShadowMapSRV();
-    TArray<uint32> Indices = FShadowPass::GetShadowMapIndex(InLightComponent);
+    static ULightComponentBase* LastComponent = nullptr;
+    static TArray<ID3D11ShaderResourceView*> SRVs;
+    if (LastComponent != InLightComponent)
+    {
+        for (auto& SRV : SRVs)
+        {
+            if (SRV)
+            {
+                SRV->Release();
+                SRV = nullptr;
+            }
+        }
+        SRVs.Empty();
+
+        // 새로운 SRV를 생성
+        int NumSRV = InLightComponent->IsA<UPointLightComponent>() ? 6 : 1;
+        TArray<uint32> Indices = FShadowPass::GetShadowMapIndex(InLightComponent);
+        for (int i = 0; i < NumSRV; i++)
+        {
+            D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+            srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+            srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+            srvDesc.Texture2DArray.MostDetailedMip = 0;
+            srvDesc.Texture2DArray.MipLevels = 1;
+            srvDesc.Texture2DArray.FirstArraySlice = Indices[i];
+            srvDesc.Texture2DArray.ArraySize = 1;
+
+            ID3D11ShaderResourceView* SRV = nullptr;
+            HRESULT hr = GEngineLoop.GraphicDevice.Device->CreateShaderResourceView(FShadowPass::ShadowMapTexture, &srvDesc, &SRV);
+            if (FAILED(hr)) {
+                return;
+            }
+            SRVs.Add(SRV);
+        }
+        LastComponent = InLightComponent;
+    }
+
     float RegionWidth = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
 
     if (ImGui::TreeNodeEx("ShadowMaps", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
     {
-
-        for (uint32 i = 0; i < Indices.Num(); ++i)
+        int NumSRV = InLightComponent->IsA<UPointLightComponent>() ? 6 : 1;
+        for (uint32 i = 0; i < NumSRV; ++i)
         {
-            ImGui::Image((ImTextureID)(intptr_t)SRV, ImVec2(250,250));
+            if (NumSRV == 6)
+            {
+                switch (i)
+                {
+                case 0:
+                    ImGui::Text("+ X");
+                    break;
+                case 1:
+                    ImGui::Text("+ Y");
+                    break;
+                case 2:
+                    ImGui::Text("+ Z");
+                    break;
+                case 3:
+                    ImGui::Text("- X");
+                    break;
+                case 4:
+                    ImGui::Text("- Y");
+                    break;
+                case 5:
+                    ImGui::Text("- Z");
+                    break;
+                }
+            }
+            ImGui::Image((ImTextureID)(intptr_t)SRVs[i], ImVec2(250, 250));
         }
         ImGui::TreePop();
     }

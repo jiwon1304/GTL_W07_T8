@@ -8,6 +8,7 @@ class USpotLightComponent :public ULightComponentBase
 public:
     USpotLightComponent();
     virtual ~USpotLightComponent();
+    UObject* Duplicate(UObject* InOuter);
     FVector GetDirection();
 
     const FSpotLightInfo& GetSpotLightInfo() const;

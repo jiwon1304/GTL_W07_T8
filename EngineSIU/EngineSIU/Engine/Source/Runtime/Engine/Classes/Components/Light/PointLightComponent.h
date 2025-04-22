@@ -9,6 +9,8 @@ public:
     UPointLightComponent();
     virtual ~UPointLightComponent() override;
 
+    UObject* Duplicate(UObject* InOuter);
+
     const FPointLightInfo& GetPointLightInfo() const;
     void SetPointLightInfo(const FPointLightInfo& InPointLightInfo);
 
