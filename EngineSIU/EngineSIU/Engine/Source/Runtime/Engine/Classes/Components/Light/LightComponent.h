@@ -1,24 +1,34 @@
 #pragma once
-#include "Components/SceneComponent.h"
+#include "LightComponentBase.h"
+#include "UObject/ObjectMacros.h"
 
-
-class ULightComponentBase : public USceneComponent
+class ULightComponent : public ULightComponentBase
 {
-    DECLARE_CLASS(ULightComponentBase, USceneComponent)
+    DECLARE_CLASS(ULightComponent, ULightComponentBase)
 
 public:
-    ULightComponentBase();
-    virtual ~ULightComponentBase() override;
+    ULightComponent();
+    ~ULightComponent();
+
     virtual UObject* Duplicate(UObject* InOuter) override;
 
-    virtual void TickComponent(float DeltaTime) override;
-    virtual int CheckRayIntersection(FVector& rayOrigin, FVector& rayDirection, float& pfNearHitDistance) override;
-protected:
+    float GetShadowResolutionScale() const;
+    void SetShadowResolutionScale(float InShadowResolution);
 
-    FBoundingBox AABB;
+    float GetShadowBias() const;
+    void SetShadowBias(float InBias);
+
+    float GetShadowSlopeBias() const;
+    void SetShadowSlopeBias(float InSlopeBias);
+
+    float GetShadowSharpen() const;
+    void SetShadowSharpen(float InSharpness);
 
 
-
-public:
-    FBoundingBox GetBoundingBox() const {return AABB;}
+private:
+    // Currently not use resolution member
+    float ShadowResolutionScale;
+    float ShadowBias;
+    float ShadowSlopeBias;
+    float ShadowSharpen;
 };

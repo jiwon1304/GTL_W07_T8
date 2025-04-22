@@ -1,34 +1,68 @@
 #include "LightComponent.h"
 #include "UObject/Casts.h"
 
-ULightComponentBase::ULightComponentBase()
+ULightComponent::ULightComponent()
 {
-    AABB.max = { 1.f,1.f,0.1f };
-    AABB.min = { -1.f,-1.f,-0.1f };
+    ShadowResolutionScale = 0;
+    ShadowBias = 0.0001;
+    ShadowSlopeBias = 0.0001;
+    ShadowSharpen = 0;
 }
 
-ULightComponentBase::~ULightComponentBase()
+ULightComponent::~ULightComponent()
 {
   
 }
 
-UObject* ULightComponentBase::Duplicate(UObject* InOuter)
+UObject* ULightComponent::Duplicate(UObject* InOuter)
 {
-    ThisClass* NewComponent = Cast<ThisClass>(Super::Duplicate(InOuter));
-
-    NewComponent->AABB = AABB;
-
+    ULightComponent* NewComponent = Cast<ULightComponent>(Super::Duplicate(InOuter));
+    if (NewComponent)
+    {
+        NewComponent->ShadowResolutionScale = ShadowResolutionScale;
+        NewComponent->ShadowBias = ShadowBias;
+        NewComponent->ShadowSlopeBias = ShadowSlopeBias;
+        NewComponent->ShadowSharpen = ShadowSharpen;
+    }
     return NewComponent;
 }
 
-void ULightComponentBase::TickComponent(float DeltaTime)
+float ULightComponent::GetShadowResolutionScale() const
 {
-    Super::TickComponent(DeltaTime);
+    return ShadowResolutionScale;
 }
 
-int ULightComponentBase::CheckRayIntersection(FVector& rayOrigin, FVector& rayDirection, float& pfNearHitDistance)
+void ULightComponent::SetShadowResolutionScale(float InShadowResolution)
 {
-    bool res = AABB.Intersect(rayOrigin, rayDirection, pfNearHitDistance);
-    return res;
+    ShadowResolutionScale = InShadowResolution;
 }
 
+float ULightComponent::GetShadowBias() const
+{
+    return ShadowBias;
+}
+
+void ULightComponent::SetShadowBias(float InBias)
+{
+    ShadowBias = InBias;
+}
+
+float ULightComponent::GetShadowSlopeBias() const
+{
+    return ShadowSlopeBias;
+}
+
+void ULightComponent::SetShadowSlopeBias(float InSlopeBias)
+{
+    ShadowSlopeBias = InSlopeBias;
+}
+
+float ULightComponent::GetShadowSharpen() const
+{
+    return ShadowSharpen;
+}
+
+void ULightComponent::SetShadowSharpen(float InSharpness)
+{
+    ShadowSharpen = InSharpness;
+}

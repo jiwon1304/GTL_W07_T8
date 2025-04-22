@@ -32,6 +32,11 @@ private:
     TArray<UDirectionalLightComponent*> DirectionalLights;
     TArray<UAmbientLightComponent*> AmbientLights;
 
+    FString AmbientLightBufferKey = "AmbientLights";
+    FString DirectionalLightBufferKey = "DirectionalLights";
+    FString SpotLightBufferKey = "SpotLights";
+    FString PointLightBufferKey = "PointLights";
+    
     FDXDBufferManager* BufferManager;
     FGraphicsDevice* Graphics;
     FDXDShaderManager* ShaderManager;
