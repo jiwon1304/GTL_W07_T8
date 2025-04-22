@@ -92,6 +92,7 @@ struct MatrixTransposed
 {
     row_major matrix TransposedMat;
 };
+
 StructuredBuffer<MatrixTransposed> LigthViewProjection : register(t9);
 
 // [TEMP] ShadowMap Slot / Comparison Sampler Slot 미정
@@ -101,6 +102,19 @@ SamplerComparisonState ShadowSampler : register(s8);
 // [TEMP] VSM용 ShadowMap / Sampler 바인딩 - 미구현
 Texture2DArray<float2> VSMShadowMapArray : register(t10);
 SamplerState VSMSampler : register(s10);
+
+cbuffer Lighting : register(b0)
+{
+    int DirectionalLightsCount;
+    int PointLightsCount;
+    int SpotLightsCount;
+    int AmbientLightsCount;
+};
+
+StructuredBuffer<FAmbientLightInfo> AmbientLights : register(t20);
+StructuredBuffer<FDirectionalLightInfo> DirectionalLights : register(t21);
+StructuredBuffer<FSpotLightInfo> SpotLights : register(t22);
+StructuredBuffer<FPointLightInfo> PointLights : register(t23);
 
 // PCF
 float FilterPCF(
@@ -238,19 +252,6 @@ float CalculateShadowFactor(
     return ShadowFactor;
 }
 
-cbuffer Lighting : register(b0)
-{
-    FAmbientLightInfo Ambient[MAX_AMBIENT_LIGHT];
-    FDirectionalLightInfo Directional[MAX_DIRECTIONAL_LIGHT];
-    FPointLightInfo PointLights[MAX_POINT_LIGHT];
-    FSpotLightInfo SpotLights[MAX_SPOT_LIGHT];
-    
-    int DirectionalLightsCount;
-    int PointLightsCount;
-    int SpotLightsCount;
-    int AmbientLightsCount;
-};
-
 float CalculateAttenuation(float Distance, float AttenuationFactor, float Radius)
 {
     if (Distance > Radius)
@@ -385,7 +386,7 @@ float4 SpotLight(int Index, float3 WorldPosition, float3 WorldNormal, float3 Wor
 
 float4 DirectionalLight(int nIndex, float3 WorldPosition, float3 WorldNormal, float3 WorldViewPosition, float3 DiffuseColor)
 {
-    FDirectionalLightInfo LightInfo = Directional[nIndex];
+    FDirectionalLightInfo LightInfo = DirectionalLights[nIndex];
     
     float3 LightDir = normalize(-LightInfo.Direction);
     float3 ViewDir = normalize(WorldViewPosition - WorldPosition);
@@ -437,7 +438,7 @@ float4 Lighting(float3 WorldPosition, float3 WorldNormal, float3 WorldViewPositi
     [unroll(MAX_AMBIENT_LIGHT)]
     for (int l = 0; l < AmbientLightsCount; l++)
     {
-        FinalColor += float4(Ambient[l].AmbientColor.rgb, 0.0);
+        FinalColor += float4(AmbientLights[l].AmbientColor.rgb, 0.0);
         FinalColor.a = 1.0;
     }
     

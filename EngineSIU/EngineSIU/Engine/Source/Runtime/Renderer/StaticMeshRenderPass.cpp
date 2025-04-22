@@ -214,7 +214,6 @@ void FStaticMeshRenderPass::PrepareRenderState(const std::shared_ptr<FEditorView
     Graphics->DeviceContext->VSSetSamplers(8, 1, &FShadowPass::ShadowMapSampler);
     Graphics->DeviceContext->PSSetShaderResources(FShadowPass::ShadowMapSRVSlot, 1, &FShadowPass::ShadowMapSRV);
     BufferManager->BindStructuredBuffer("ShadowTransformDataBufferKey", FShadowPass::TransformSRVSlot, EShaderStage::Pixel, EShaderViewType::SRV); // 실제 matrix
-
 }
 
 void FStaticMeshRenderPass::UpdateObjectConstant(const FMatrix& WorldMatrix, const FVector4& UUIDColor, bool bIsSelected) const
