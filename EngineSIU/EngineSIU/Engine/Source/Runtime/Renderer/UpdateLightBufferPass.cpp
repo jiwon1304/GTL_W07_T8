@@ -129,8 +129,8 @@ void FUpdateLightBufferPass::UpdateLightBuffer() const
     {
         if (AmbientData.Num() < MAX_AMBIENT_LIGHT)
         {
-            FAmbientLightInfo Info = Light->GetAmbientLightInfo();
-            Info.AmbientColor = Light->GetLightColor();
+            FAmbientLightInfo Info;
+            Info.LightColor = Light->GetLightColor();
             AmbientData.Add(Info);
         }
     }
@@ -139,10 +139,16 @@ void FUpdateLightBufferPass::UpdateLightBuffer() const
     {
         if (DirectionalData.Num() < MAX_DIRECTIONAL_LIGHT)
         {
-            FDirectionalLightInfo Info = Light->GetDirectionalLightInfo();
+            FDirectionalLightInfo Info;
+            Info.LightColor = Light->GetLightColor();
+            Info.Intensity = Light->GetIntensity();
             Info.Direction = Light->GetDirection();
             Info.ShadowMapIndex = FShadowPass::GetShadowMapIndex(Light)[0];
-            Info.CastShadow = 1;
+            Info.CastShadow = Light->GetCastShadowBoolean();
+            Info.ShadowResolutionScale = Light->GetShadowResolutionScale();
+            Info.ShadowBias = Light->GetShadowBias();
+            Info.ShadowSlopeBias = Light->GetShadowSlopeBias();
+            Info.ShadowSharpen = Light->GetShadowSharpen();
             DirectionalData.Add(Info);
         }
     }
@@ -151,11 +157,22 @@ void FUpdateLightBufferPass::UpdateLightBuffer() const
     {
         if (SpotLights.Num() < MAX_SPOT_LIGHT)
         {
-            FSpotLightInfo Info = Light->GetSpotLightInfo();
+            FSpotLightInfo Info;
+            Info.LightColor = Light->GetLightColor();
+            Info.Intensity = Light->GetIntensity();
             Info.Position = Light->GetWorldLocation();
             Info.Direction = Light->GetDirection();
+            Info.Radius = Light->GetRadius();
+            Info.Attenuation = Light->GetAttenuation();
+            Info.InnerRad = Light->GetInnerRad();
+            Info.OuterRad = Light->GetOuterRad();
+            Info.Type = ELightType::SPOT_LIGHT;
             Info.ShadowMapIndex = FShadowPass::GetShadowMapIndex(Light)[0];
-            Info.CastShadow = 1;
+            Info.CastShadow = Light->GetCastShadowBoolean();
+            Info.ShadowResolutionScale = Light->GetShadowResolutionScale();
+            Info.ShadowBias = Light->GetShadowBias();
+            Info.ShadowSlopeBias = Light->GetShadowSlopeBias();
+            Info.ShadowSharpen = Light->GetShadowSharpen();
             SpotData.Add(Info);
         }
     }
@@ -164,10 +181,19 @@ void FUpdateLightBufferPass::UpdateLightBuffer() const
     {
         if (PointLights.Num() < MAX_POINT_LIGHT)
         {
-            FPointLightInfo Info = Light->GetPointLightInfo();
+            FPointLightInfo Info;
+            Info.LightColor = Light->GetLightColor();
+            Info.Intensity = Light->GetIntensity();
             Info.Position = Light->GetWorldLocation();
+            Info.Radius = Light->GetRadius();
+            Info.Attenuation = Light->GetAttenuation();
+            Info.Type = ELightType::POINT_LIGHT;
             Info.ShadowMapIndex = FShadowPass::GetShadowMapIndex(Light)[0];
-            Info.CastShadow = 1;
+            Info.CastShadow = Light->GetCastShadowBoolean();
+            Info.ShadowResolutionScale = Light->GetShadowResolutionScale();
+            Info.ShadowBias = Light->GetShadowBias();
+            Info.ShadowSlopeBias = Light->GetShadowSlopeBias();
+            Info.ShadowSharpen = Light->GetShadowSharpen();
             PointData.Add(Info);
         }
     }

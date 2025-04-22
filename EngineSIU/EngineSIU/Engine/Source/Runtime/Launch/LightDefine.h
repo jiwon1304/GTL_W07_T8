@@ -9,7 +9,7 @@
 
 struct FAmbientLightInfo
 {
-    FLinearColor AmbientColor;         // RGB + alpha
+    FLinearColor LightColor;         // RGB + alpha
 };
 
 struct FDirectionalLightInfo
@@ -21,6 +21,11 @@ struct FDirectionalLightInfo
 
     int     ShadowMapIndex; 
     int     CastShadow; // 그림자 생성 여부
+    float ShadowResolutionScale;
+    float ShadowBias;
+
+    float ShadowSlopeBias;
+    float ShadowSharpen;
     float   Pad1;
     float   Pad2;
 };
@@ -38,6 +43,11 @@ struct FPointLightInfo
     int     ShadowMapIndex;
 
     int     CastShadow;
+    float ShadowResolutionScale;
+    float ShadowBias;
+    float ShadowSlopeBias;
+    float ShadowSharpen;
+
     FVector Padding;
 };
 
@@ -58,11 +68,16 @@ struct FSpotLightInfo
 
     int     ShadowMapIndex;
     int     CastShadow;
+    float ShadowResolutionScale;
+    float ShadowBias;
+    float ShadowSlopeBias;
+    float ShadowSharpen;
     FVector2D Padding;
 };
 
 struct FLightInfoBuffer
 {
+    int DirectionalLightsCount;
     int PointLightsCount;
     int SpotLightsCount;
     int AmbientLightsCount;

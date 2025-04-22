@@ -26,6 +26,12 @@ struct FDirectionalLightInfo
     // [TEMP] 추후 들어오는 값에 따라 바뀔 수 있음
     int ShadowMapIndex; // 텍스처 배열 시작 인덱스
     int CastsShadows;
+    
+    float ShadowResolutionScale;
+    float ShadowBias;
+    float ShadowSlopeBias;
+    float ShadowSharpen;
+    
     float2 Padding;
 };
 
@@ -43,6 +49,12 @@ struct FPointLightInfo
     // [TEMP] 추후 들어오는 값에 따라 바뀔 수 있음
     int ShadowMapIndex; // 텍스처 배열 시작 인덱스
     int CastsShadows;
+    
+    float ShadowResolutionScale;
+    float ShadowBias;
+    float ShadowSlopeBias;
+    float ShadowSharpen;
+    
     float3 Padding;
 };
 
@@ -64,6 +76,12 @@ struct FSpotLightInfo
     // [TEMP] 추후 들어오는 값에 따라 바뀔 수 있음
     int ShadowMapIndex; // 텍스처 배열 시작 인덱스
     int CastsShadows;
+    
+    float ShadowResolutionScale;
+    float ShadowBias;
+    float ShadowSlopeBias;
+    float ShadowSharpen;
+    
     float2 Padding;
 };
 
@@ -120,30 +138,36 @@ StructuredBuffer<FPointLightInfo> PointLights : register(t23);
 float FilterPCF(
     float2 ShadowUV,
     float TexelSize,
-    float DepthRecevier,
+    float DepthReceiver,
     int ShadowIndex,
     int KernelSize = 3)
 {
     float ShadowFactor = 0.0;
+    const float KernelOffset = (KernelSize % 2 == 0) ? 0.5 : 0.0;
     const int HalfKernel = KernelSize / 2;
     
-    for (int x = -HalfKernel; x <= HalfKernel; ++x)
+    for (int x = 0; x < KernelSize; ++x)
     {
-        for (int y = -HalfKernel; y <= HalfKernel; ++y)
+        for (int y = 0; y < KernelSize; ++y)
         {
-            float3 Coord = float3(
-                ShadowUV + float2(x, y) * TexelSize,
-                ShadowIndex
+            float2 SampleOffset = float2(
+                (x - (KernelSize - 1) / 2.0 + KernelOffset) * TexelSize,
+                (y - (KernelSize - 1) / 2.0 + KernelOffset) * TexelSize
             );
             
             ShadowFactor += ShadowMapArray.SampleCmpLevelZero(
                 ShadowSampler,
-                Coord,
-                DepthRecevier
+                float3(ShadowUV + SampleOffset, ShadowIndex),
+                DepthReceiver
             );
         }
     }
-    return ShadowFactor / (KernelSize * KernelSize);
+    
+    float NormalizationFactor = (KernelSize % 2 == 0) ?
+        (KernelSize * KernelSize - 1) :
+        (KernelSize * KernelSize);
+        
+    return ShadowFactor / NormalizationFactor;
 }
 
 // Poisson Filter
@@ -207,9 +231,12 @@ float CalculateShadowFactor(
     int ShadowIndex,
     float3 WorldPos,
     float3 Normal,
-    float3 LightDir)
+    float3 LightDir,
+    float BaseBias,
+    float SlopeBias,
+    float Sharpness
+)
 {
-    //return 1.f;
     // World to Light perspective
     float4 LightSpacePos = mul(float4(WorldPos, 1.0), LightViewProjection);
     LightSpacePos.xyz /= LightSpacePos.w;
@@ -218,7 +245,9 @@ float CalculateShadowFactor(
     ShadowUV.y = 1.0 - ShadowUV.y;
 
     // Dynamic shadow bias
-    float Bias = max(0.005 * (1.0 - dot(Normal, LightDir)), 0.001);
+    float NdotL = dot(Normal, LightDir);
+    float SlopeFactor = sqrt(1 - NdotL * NdotL);
+    float Bias = BaseBias + SlopeBias * SlopeFactor;
     float DepthReceiver = LightSpacePos.z - Bias;
 
     // Texelsize - 정방형으로 가정함
@@ -227,27 +256,44 @@ float CalculateShadowFactor(
     const float TexelSize = 1.0 / Width;
     
     float ShadowFactor;
-
+    
+    float AdjustedSharpness = saturate(Sharpness);
+   
     // Filtering 적용
-    // No filtering - Hard Shadow
     if (any(ShadowUV < 0.0 || ShadowUV > 1.0)) 
-        return 1.0f; // 밖은 무조건 lit되게 수정
-    
-    ShadowFactor = ShadowMapArray.SampleCmpLevelZero(
-        ShadowSampler,
-        float3(ShadowUV, ShadowIndex),
-        DepthReceiver
-    );
-    
- 
-    // PCF
-    //ShadowFactor = FilterPCF(ShadowUV, TexelSize, DepthReceiver, ShadowIndex);
-    
-    // Poisson Filter
-    //ShadowFactor = FilterPoisson(ShadowUV, TexelSize, DepthReceiver, ShadowIndex);
-    
-    // VSM
-    // ShadowFactor = FilterVSM(ShadowUV, DepthReceiver, ShadowIndex);
+        return 1.0f; // 텍스쳐 경계 바깥 Lit
+
+    int FilterMode = 1;
+
+    switch (FilterMode)
+    {
+        case 1: // PCF
+        {
+            int KernelSize = lerp(9.0f, 1.0f, AdjustedSharpness);
+            ShadowFactor = FilterPCF(ShadowUV, TexelSize, DepthReceiver, ShadowIndex, KernelSize);
+            break;
+        }
+        case 2: // Poisson
+        {
+            float Spread = lerp(3.0, 0.0, AdjustedSharpness);
+            int SampleCount = lerp(32, 4, AdjustedSharpness);
+            ShadowFactor = FilterPoisson(ShadowUV, TexelSize, DepthReceiver, ShadowIndex, Spread, SampleCount);
+            break;
+        }
+        //case 3: // VSM
+        //{
+        //  ShadowFactor = FilterVSM(ShadowUV, DepthReceiver, ShadowIndex);
+        //  break;
+        //}
+        default: // Default Hard Shadow
+        {
+            ShadowFactor = ShadowMapArray.SampleCmpLevelZero(
+                ShadowSampler,
+                float3(ShadowUV, ShadowIndex),
+                DepthReceiver
+            );
+        }
+    }
 
     return ShadowFactor;
 }
@@ -320,7 +366,10 @@ float4 PointLight(int Index, float3 WorldPosition, float3 WorldNormal, float3 Wo
                 LightInfo.ShadowMapIndex + i,
                 WorldPosition,
                 WorldNormal,
-                LightDir
+                LightDir,
+                LightInfo.ShadowBias,
+                LightInfo.ShadowSlopeBias,
+                LightInfo.ShadowSharpen
             );
         }
     }
@@ -369,7 +418,10 @@ float4 SpotLight(int Index, float3 WorldPosition, float3 WorldNormal, float3 Wor
             LightInfo.ShadowMapIndex,
             WorldPosition,
             WorldNormal,
-            LightDir
+            LightDir,
+            LightInfo.ShadowBias,
+            LightInfo.ShadowSlopeBias,
+            LightInfo.ShadowSharpen
         );
     }
      
@@ -402,7 +454,10 @@ float4 DirectionalLight(int nIndex, float3 WorldPosition, float3 WorldNormal, fl
             LightInfo.ShadowMapIndex,
             WorldPosition,
             WorldNormal,
-            LightDir
+            LightDir,
+            LightInfo.ShadowBias,
+            LightInfo.ShadowSlopeBias,
+            LightInfo.ShadowSharpen
         );
     }
 
