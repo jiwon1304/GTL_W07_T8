@@ -369,7 +369,7 @@ float4 PointLight(int Index, float3 WorldPosition, float3 WorldNormal, float3 Wo
     float DiffuseFactor = CalculateDiffuse(WorldNormal, LightDir);
     
     // Check Shadow
-    float ShadowFactor = 0.f;
+    float ShadowFactor = 1.f;
     
     if (LightInfo.CastsShadows)
     {
@@ -386,6 +386,7 @@ float4 PointLight(int Index, float3 WorldPosition, float3 WorldNormal, float3 Wo
                 LightInfo.ShadowSharpen
             );
         }
+        ShadowFactor /= 6.0;
     }
     
     

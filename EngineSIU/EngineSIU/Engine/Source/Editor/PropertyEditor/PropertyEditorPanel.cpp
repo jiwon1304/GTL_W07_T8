@@ -171,6 +171,12 @@ void PropertyEditorPanel::Render()
                     pointlightObj->SetRadius(Radius);
                 }
 
+                bool bCastShadow = pointlightObj->GetCastShadowBoolean();
+                if (ImGui::Checkbox("Cast Shadow", &bCastShadow))
+                {
+                    pointlightObj->SetCastShadowBoolean(bCastShadow);
+                }
+
                 float ShadowBias = pointlightObj->GetShadowBias();
                 if (ImGui::SliderFloat("Shadow Bias", &ShadowBias, 0.0001f, 0.001f, "%.4f"))
                     pointlightObj->SetShadowBias(ShadowBias);
@@ -222,6 +228,12 @@ void PropertyEditorPanel::Render()
                     spotlightObj->SetOuterDegree(OuterDegree);
                 }
 
+                bool bCastShadow = spotlightObj->GetCastShadowBoolean();
+                if (ImGui::Checkbox("Cast Shadow", &bCastShadow))
+                {
+                    spotlightObj->SetCastShadowBoolean(bCastShadow);
+                }
+
                 float ShadowBias = spotlightObj->GetShadowBias();
                 if (ImGui::SliderFloat("Shadow Bias", &ShadowBias, 0.0001f, 0.001f, "%.4f"))
                     spotlightObj->SetShadowBias(ShadowBias);
@@ -259,6 +271,12 @@ void PropertyEditorPanel::Render()
                 FImGuiWidget::DrawVec3Control("Direction", LightDirection, 0, 85);
 
                 //RenderLightShadowMap(dirlightObj);
+                bool bCastShadow = dirlightObj->GetCastShadowBoolean();
+                if (ImGui::Checkbox("Cast Shadow", &bCastShadow))
+                {
+                    dirlightObj->SetCastShadowBoolean(bCastShadow);
+                }
+
                 float ShadowBias = dirlightObj->GetShadowBias();
                 if (ImGui::SliderFloat("Shadow Bias", &ShadowBias, 0.0001f, 0.001f, "%.4f"))
                     dirlightObj->SetShadowBias(ShadowBias);
