@@ -226,8 +226,8 @@ HRESULT FShadowPass::CreateBuffer(uint32 NumTransforms)
         return hr;
     }
 
-    return BufferManager->CreateStructuredBuffer(TransformDataBufferKey, sizeof(ShadowMapData) * NumTransforms, D3D11_BIND_SHADER_RESOURCE,
-        D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE, sizeof(ShadowMapData), NumTransforms);
+    return BufferManager->CreateStructuredBuffer(TransformDataBufferKey, sizeof(FMatrix) * NumTransforms, D3D11_BIND_SHADER_RESOURCE,
+        D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE, sizeof(FMatrix), NumTransforms);
 }
 
 //void FShadowPass::UpdateShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport)
@@ -246,7 +246,7 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
 
     FMatrix ViewportViewProj = Viewport->GetViewMatrix() * VProj;
 
-    TArray<ShadowMapData> Transforms;
+    TArray<FMatrix> Transforms;
     uint32 Index = 0;
 
     for (ULightComponentBase* LightComponent : TObjectRange<ULightComponentBase>())
