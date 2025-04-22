@@ -159,7 +159,7 @@ HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
     texDesc.Height = TextureSize;
     texDesc.MipLevels = 1;
     texDesc.ArraySize = NumMaps;
-    texDesc.Format = DXGI_FORMAT_R32_TYPELESS; // Typeless에서 변경했는데 될지 모름...
+    texDesc.Format = DXGI_FORMAT_R24G8_TYPELESS; // Typeless에서 변경했는데 될지 모름...
     texDesc.SampleDesc.Count = 1;
     texDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
     texDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -175,7 +175,7 @@ HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
     for (int i = 0; i < NumMaps; ++i)
     {
         D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-        dsvDesc.Format = DXGI_FORMAT_D32_FLOAT; // Typeless의 실질적인 Depth format
+        dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT; // Typeless의 실질적인 Depth format
         dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
         dsvDesc.Texture2DArray.MipSlice = 0;
         dsvDesc.Texture2DArray.FirstArraySlice = i;
@@ -191,7 +191,7 @@ HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
 
     // 3. ShaderResourceView 생성
     D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-    srvDesc.Format = DXGI_FORMAT_R32_FLOAT; // Typeless와 호환되는 SRV 포맷
+    srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS; // Typeless와 호환되는 SRV 포맷
     srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
     srvDesc.Texture2DArray.MostDetailedMip = 0;
     srvDesc.Texture2DArray.MipLevels = 1;
@@ -226,19 +226,27 @@ HRESULT FShadowPass::CreateBuffer(uint32 NumTransforms)
         return hr;
     }
 
-    return BufferManager->CreateStructuredBuffer(TransformDataBufferKey, sizeof(FMatrix) * NumTransforms, D3D11_BIND_SHADER_RESOURCE,
-        D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE, sizeof(FMatrix), NumTransforms);
+    return BufferManager->CreateStructuredBuffer(TransformDataBufferKey, sizeof(ShadowMapData) * NumTransforms, D3D11_BIND_SHADER_RESOURCE,
+        D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE, sizeof(ShadowMapData), NumTransforms);
 }
 
-void FShadowPass::UpdateShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport)
-{
-}
+//void FShadowPass::UpdateShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport)
+//{
+//}
 
 void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport)
 {
     IndicesMap.Empty();
     
-    TArray<FMatrix> Transforms;
+    float ViewportNear = Viewport->GetCameraLearClip();
+    float ViewportFar = Viewport->GetCameraFarClip();
+    float Fov = Viewport->ViewFOV;
+    Fov = FMath::DegreesToRadians(Fov);
+    auto VProj = JungleMath::CreateProjectionMatrix(Fov, 1, ViewportNear, ViewportFar);
+
+    FMatrix ViewportViewProj = Viewport->GetViewMatrix() * VProj;
+
+    TArray<ShadowMapData> Transforms;
     uint32 Index = 0;
 
     for (ULightComponentBase* LightComponent : TObjectRange<ULightComponentBase>())
@@ -246,14 +254,17 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
         // map의 크기를 AABB로 해서 최적의 값 찾기(near far position)
         if (UDirectionalLightComponent* DirLight = Cast<UDirectionalLightComponent>(LightComponent))
         {
-            FVector CameraPosition = Viewport->GetCameraLocation();
-            // 일단은 Component의 위치를 기준으로 함(확인하기 편하게)
-            //FVector eye = CameraPosition - DirLight->GetDirection() * 64;
-            FVector eye = DirLight->GetWorldLocation();
-            FVector target = eye + DirLight->GetDirection();
+            FVector LightPosition = DirLight->GetWorldLocation();
+            LightPosition = ViewportViewProj.TransformPosition(LightPosition);
+            FVector LightDirection = DirLight->GetDirection();
+            LightDirection = FMatrix::TransformVector(LightDirection, ViewportViewProj);
+            LightDirection.Normalize();
+
+            FVector eye = LightPosition;
+            FVector target = eye + LightDirection;
             FVector up = FVector::UpVector;
 
-            if (abs(DirLight->GetDirection().Dot(up)) > 1 - FLT_EPSILON)
+            if (abs(LightDirection.Dot(up)) > 1 - FLT_EPSILON)
             {
                 up = FVector::RightVector;
             }
@@ -264,7 +275,7 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
             //FMatrix Proj = JungleMath::CreateProjectionMatrix(150, 1, 0.1, 30.f);
 
             IndicesMap[LightComponent].Add(Index);
-            Transforms.Add(View * Proj);
+            Transforms.Add({ ViewportViewProj * View * Proj, });
             Index++;
         }
 
@@ -295,7 +306,7 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
                 FMatrix Proj = JungleMath::CreateProjectionMatrix(FMath::DegreesToRadians(90), 1, 0.1, PointLight->GetRadius());
 
                 IndicesMap[LightComponent].Add(Index);
-                Transforms.Add(View * Proj);
+                Transforms.Add({ ViewportViewProj * View * Proj, });
                 Index++;
             }   
         }
@@ -317,7 +328,7 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
             FMatrix Proj = JungleMath::CreateProjectionMatrix(rad, 1, 0.1f, SpotLight->GetRadius()); // 파라미터 받아서값 조절할 수 있게 만들기
 
             IndicesMap[LightComponent].Add(Index);
-            Transforms.Add(View * Proj);
+            Transforms.Add({ ViewportViewProj * View * Proj, });
             Index++;
 
         }
@@ -330,22 +341,6 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
     BufferManager->UpdateStructuredBuffer(TransformDataBufferKey, Transforms);
 }
 
-//void FShadowPass::AddTargetLight(ULightComponentBase* InLightComponent)
-//{
-//    if (IndicesMap.Contains(InLightComponent)) {
-//        UE_LOG(LogLevel::Warning, TEXT("이미 등록된 LightComponent입니다."));
-//        return;
-//    }
-//    
-//
-//    IndicesMap[InLightComponent] = TArray<uint32>();
-//    if (InLightComponent->IsA<UDirectionalLightComponent>())
-//    {
-//        // 하나만 필요하므로
-//        // 이렇게해도 충돌 안나나?
-//        IndicesMap[InLightComponent].Add(IndicesMap.Num());
-//    }
-//}
 
 void FShadowPass::UpdateCascadedShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport)
 {

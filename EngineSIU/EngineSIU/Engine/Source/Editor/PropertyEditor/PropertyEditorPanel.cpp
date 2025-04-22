@@ -914,7 +914,7 @@ void PropertyEditorPanel::RenderLightShadowMap(ULightComponentBase* InLightCompo
         for (int i = 0; i < NumSRV; i++)
         {
             D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-            srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+            srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
             srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
             srvDesc.Texture2DArray.MostDetailedMip = 0;
             srvDesc.Texture2DArray.MipLevels = 1;
