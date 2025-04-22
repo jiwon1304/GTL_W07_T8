@@ -1,29 +1,20 @@
 #pragma once
 #include "LightComponent.h"
 
-class USpotLightComponent :public ULightComponentBase
+class USpotLightComponent :public ULightComponent
 {
 
-    DECLARE_CLASS(USpotLightComponent, ULightComponentBase)
+    DECLARE_CLASS(USpotLightComponent, ULightComponent)
 public:
     USpotLightComponent();
     virtual ~USpotLightComponent();
-    FVector GetDirection();
 
-    const FSpotLightInfo& GetSpotLightInfo() const;
-    void SetSpotLightInfo(const FSpotLightInfo& InSpotLightInfo);
+    virtual UObject* Duplicate(UObject* InOuter) override;
+
+    FVector GetDirection();
 
     float GetRadius() const;
     void SetRadius(float InRadius);
-
-    FLinearColor GetLightColor() const;
-    void SetLightColor(const FLinearColor& InColor);
-
-    float GetIntensity() const;
-    void SetIntensity(float InIntensity);
-
-    int GetType() const;
-    void SetType(int InType);
 
     float GetInnerRad() const;
     void SetInnerRad(float InInnerCos);
@@ -37,7 +28,14 @@ public:
     float GetOuterDegree() const;
     void SetOuterDegree(float InOuterDegree);
 
+    float GetAttenuation() const;
+    void SetAttenuation(float InAttenuation);
 private:
     FSpotLightInfo SpotLightInfo;
+
+    float InnerRad;
+    float OuterRad;
+    float Radius;
+    float Attenuation;
 };
 

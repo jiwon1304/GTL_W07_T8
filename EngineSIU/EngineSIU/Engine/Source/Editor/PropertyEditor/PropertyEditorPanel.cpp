@@ -3,6 +3,7 @@
 #include "World/World.h"
 #include "Actors/Player.h"
 #include "Components/Light/LightComponent.h"
+#include "Components/Light/LightComponentBase.h"
 #include "Components/Light/PointLightComponent.h"
 #include "Components/Light/SpotLightComponent.h"
 #include "Components/Light/DirectionalLightComponent.h"
@@ -170,6 +171,17 @@ void PropertyEditorPanel::Render()
                     pointlightObj->SetRadius(Radius);
                 }
 
+                float ShadowBias = pointlightObj->GetShadowBias();
+                if (ImGui::SliderFloat("Shadow Bias", &ShadowBias, 0.0001f, 0.001f, "%.4f"))
+                    pointlightObj->SetShadowBias(ShadowBias);
+
+                float ShadowSlopeBias = pointlightObj->GetShadowSlopeBias();
+                if (ImGui::SliderFloat("Shadow Slope Bias", &ShadowSlopeBias, 0.0001f, 0.001f, "%.4f"))
+                    pointlightObj->SetShadowSlopeBias(ShadowSlopeBias);
+
+                float ShadowSharpen = pointlightObj->GetShadowSharpen();
+                if (ImGui::SliderFloat("Shadow Sharpen", &ShadowSharpen, 0.0f, 1.0f, "%.3f"))
+                    pointlightObj->SetShadowSharpen(ShadowSharpen);
 
                 ImGui::TreePop();
             }
@@ -189,7 +201,7 @@ void PropertyEditorPanel::Render()
                     [&](FLinearColor c) { spotlightObj->SetLightColor(c); });
 
                 float Intensity = spotlightObj->GetIntensity();
-                if (ImGui::SliderFloat("Intensity", &Intensity, 0.0f, 160.0f, "%.1f"))
+                if (ImGui::SliderFloat("Intensity", &Intensity, 0.0f, 10000.0f, "%.1f"))
                     spotlightObj->SetIntensity(Intensity);
 
                 float Radius = spotlightObj->GetRadius();
@@ -209,6 +221,18 @@ void PropertyEditorPanel::Render()
                 if (ImGui::SliderFloat("OuterDegree", &OuterDegree, 0.01f, 180.f, "%.1f")) {
                     spotlightObj->SetOuterDegree(OuterDegree);
                 }
+
+                float ShadowBias = spotlightObj->GetShadowBias();
+                if (ImGui::SliderFloat("Shadow Bias", &ShadowBias, 0.0001f, 0.001f, "%.4f"))
+                    spotlightObj->SetShadowBias(ShadowBias);
+
+                float ShadowSlopeBias = spotlightObj->GetShadowSlopeBias();
+                if (ImGui::SliderFloat("Shadow Slope Bias", &ShadowSlopeBias, 0.0001f, 0.001f, "%.4f"))
+                    spotlightObj->SetShadowSlopeBias(ShadowSlopeBias);
+
+                float ShadowSharpen = spotlightObj->GetShadowSharpen();
+                if (ImGui::SliderFloat("Shadow Sharpen", &ShadowSharpen, 0.0f, 1.0f, "%.3f"))
+                    spotlightObj->SetShadowSharpen(ShadowSharpen);
 
                 ImGui::TreePop();
             }
@@ -235,12 +259,20 @@ void PropertyEditorPanel::Render()
                 FImGuiWidget::DrawVec3Control("Direction", LightDirection, 0, 85);
 
                 //RenderLightShadowMap(dirlightObj);
+                float ShadowBias = dirlightObj->GetShadowBias();
+                if (ImGui::SliderFloat("Shadow Bias", &ShadowBias, 0.0001f, 0.001f, "%.4f"))
+                    dirlightObj->SetShadowBias(ShadowBias);
+
+                float ShadowSlopeBias = dirlightObj->GetShadowSlopeBias();
+                if (ImGui::SliderFloat("Shadow Slope Bias", &ShadowSlopeBias, 0.0001f, 0.001f, "%.4f"))
+                    dirlightObj->SetShadowSlopeBias(ShadowSlopeBias);
+
+                float ShadowSharpen = dirlightObj->GetShadowSharpen();
+                if (ImGui::SliderFloat("Shadow Sharpen", &ShadowSharpen, 0.0f, 1.0f, "%.3f"))
+                    dirlightObj->SetShadowSharpen(ShadowSharpen);
 
                 ImGui::TreePop();
             }
-
-
-
 
             ImGui::PopStyleColor();
         }

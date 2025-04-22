@@ -152,51 +152,61 @@ HRESULT FDXDBufferManager::CreateStructuredBuffer(const FString& KeyName, UINT b
     return S_OK;
 }
 
-void FDXDBufferManager::BindStructuredBuffer(const FString& Key, UINT StartSlot, EShaderStage Stage, EShaderViewType ViewType) const
+void FDXDBufferManager::BindStructuredBuffer(
+    const FString& Key,
+    UINT StartSlot,
+    EShaderStage Stage,
+    EShaderViewType ViewType) const
 {
-   if (ViewType == EShaderViewType::SRV)
-   {
-       if (ID3D11ShaderResourceView* SRV = GetStructuredBufferSRV(Key))
-       {
-           if (Stage == EShaderStage::Vertex)
-           {
-               DXDeviceContext->VSSetShaderResources(StartSlot, 1, &SRV);
-           }
-           else if (Stage == EShaderStage::Pixel)
-           {
-               DXDeviceContext->PSSetShaderResources(StartSlot, 1, &SRV);
-           }
-           else if (Stage == EShaderStage::Compute)
-           {
-               DXDeviceContext->CSSetShaderResources(StartSlot, 1, &SRV);
-           }
-       }
-   }
-   else
-   {
-       UE_LOG(LogLevel::Error, TEXT("Structured buffer has no SRV."));
-       return;
-   }
-   if (ViewType == EShaderViewType::UAV)
-   {
-       if (ID3D11UnorderedAccessView* UAV = GetStructuredBufferUAV(Key))
-       {
-           if (Stage == EShaderStage::Compute)
-           {
-               DXDeviceContext->CSSetUnorderedAccessViews(StartSlot, 1, &UAV, nullptr);
-           }
-           else
-           {
-               UE_LOG(LogLevel::Error, TEXT("Cannot bind UAV to vertex / pixel shader!"));
-           }
-       }
-   }
-   else
-   {
-       UE_LOG(LogLevel::Error, TEXT("Structured buffer has no UAV."));
-       return;
-   }
+    if (ViewType == EShaderViewType::SRV)
+    {
+        if (ID3D11ShaderResourceView* SRV = GetStructuredBufferSRV(Key))
+        {
+            switch (Stage)
+            {
+            case EShaderStage::Vertex:
+                DXDeviceContext->VSSetShaderResources(StartSlot, 1, &SRV);
+                break;
+            case EShaderStage::Pixel:
+                DXDeviceContext->PSSetShaderResources(StartSlot, 1, &SRV);
+                break;
+            case EShaderStage::Compute:
+                DXDeviceContext->CSSetShaderResources(StartSlot, 1, &SRV);
+                break;
+            default:
+                UE_LOG(LogLevel::Error, TEXT("Invalid shader stage for SRV!"));
+                break;
+            }
+        }
+        else
+        {
+            UE_LOG(LogLevel::Error, TEXT("Structured buffer has no SRV: %s"), *Key);
+        }
+    }
+    else if (ViewType == EShaderViewType::UAV)
+    {
+        if (ID3D11UnorderedAccessView* UAV = GetStructuredBufferUAV(Key))
+        {
+            if (Stage == EShaderStage::Compute)
+            {
+                DXDeviceContext->CSSetUnorderedAccessViews(StartSlot, 1, &UAV, nullptr);
+            }
+            else
+            {
+                UE_LOG(LogLevel::Error, TEXT("Cannot bind UAV to non-compute shader!"));
+            }
+        }
+        else
+        {
+            UE_LOG(LogLevel::Error, TEXT("Structured buffer has no UAV: %s"), *Key);
+        }
+    }
+    else
+    {
+        UE_LOG(LogLevel::Error, TEXT("Invalid view type specified!"));
+    }
 }
+
 
 FVertexInfo FDXDBufferManager::GetVertexBuffer(const FString& InName) const
 {
