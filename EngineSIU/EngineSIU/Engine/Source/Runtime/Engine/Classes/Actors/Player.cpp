@@ -172,7 +172,11 @@ void AEditorPlayer::PickActor(const FVector& pickPosition)
     }
     if (Possible)
     {
-        Cast<UEditorEngine>(GEngine)->SelectActor(Possible->GetOwner());
+        if (Possible != GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent)
+        {
+            Cast<UEditorEngine>(GEngine)->SelectActor(Possible->GetOwner());
+
+        }
     }
     else
     {

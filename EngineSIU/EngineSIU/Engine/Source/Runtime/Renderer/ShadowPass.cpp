@@ -237,14 +237,7 @@ HRESULT FShadowPass::CreateBuffer(uint32 NumTransforms)
 void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport)
 {
     IndicesMap.Empty();
-    
-    float ViewportNear = Viewport->GetCameraLearClip();
-    float ViewportFar = Viewport->GetCameraFarClip();
-    float Fov = Viewport->ViewFOV;
-    Fov = FMath::DegreesToRadians(Fov);
-    auto VProj = JungleMath::CreateProjectionMatrix(Fov, 1, ViewportNear, ViewportFar);
 
-    FMatrix ViewportViewProj = Viewport->GetViewMatrix() * VProj;
 
     TArray<FMatrix> Transforms;
     uint32 Index = 0;
@@ -255,10 +248,7 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
         if (UDirectionalLightComponent* DirLight = Cast<UDirectionalLightComponent>(LightComponent))
         {
             FVector LightPosition = DirLight->GetWorldLocation();
-            LightPosition = ViewportViewProj.TransformPosition(LightPosition);
             FVector LightDirection = DirLight->GetDirection();
-            LightDirection = FMatrix::TransformVector(LightDirection, ViewportViewProj);
-            LightDirection.Normalize();
 
             FVector eye = LightPosition;
             FVector target = eye + LightDirection;
@@ -271,11 +261,12 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
             
             FMatrix View = JungleMath::CreateViewMatrix(eye, target, up);
 
+            // FEditorViewportClient::UpdateProjectionMatrix() 변경하기
             FMatrix Proj = JungleMath::CreateOrthoProjectionMatrix(30.0, 30.0, 0.1f, 300.f); // 파라미터 받아서값 조절할 수 있게 만들기
             //FMatrix Proj = JungleMath::CreateProjectionMatrix(150, 1, 0.1, 30.f);
 
             IndicesMap[LightComponent].Add(Index);
-            Transforms.Add({ ViewportViewProj * View * Proj, });
+            Transforms.Add({ View * Proj, });
             Index++;
         }
 
@@ -306,7 +297,7 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
                 FMatrix Proj = JungleMath::CreateProjectionMatrix(FMath::DegreesToRadians(90), 1, 0.1, PointLight->GetRadius());
 
                 IndicesMap[LightComponent].Add(Index);
-                Transforms.Add({ ViewportViewProj * View * Proj, });
+                Transforms.Add({ View * Proj, });
                 Index++;
             }   
         }
@@ -328,7 +319,7 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
             FMatrix Proj = JungleMath::CreateProjectionMatrix(rad, 1, 0.1f, SpotLight->GetRadius()); // 파라미터 받아서값 조절할 수 있게 만들기
 
             IndicesMap[LightComponent].Add(Index);
-            Transforms.Add({ ViewportViewProj * View * Proj, });
+            Transforms.Add({ View * Proj, });
             Index++;
 
         }

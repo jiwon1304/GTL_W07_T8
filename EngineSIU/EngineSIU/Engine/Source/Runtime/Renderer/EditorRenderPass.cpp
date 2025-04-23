@@ -22,7 +22,8 @@
 #include "Engine/Classes/Components/HeightFogComponent.h"
 #include "Engine/Classes/Components/Light/AmbientLightComponent.h"
 #include "Engine/FLoaderOBJ.h"
-
+#include "Engine/EditorEngine.h"
+#include "Editor/LevelEditor/SLevelEditor.h"
 
 
 void FEditorRenderPass::Initialize(FDXDBufferManager* InBufferManager, FGraphicsDevice* InGraphics, FDXDShaderManager* InShaderManager)
@@ -455,7 +456,11 @@ void FEditorRenderPass::PrepareRender()
             // light
             if (ULightComponentBase* light = Cast<ULightComponentBase>(comp))
             {
-                Resources.Components.Light.Add(light);
+                if (light != GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent)
+                {
+                    Resources.Components.Light.Add(light);
+
+                }
             }
 
             // fog

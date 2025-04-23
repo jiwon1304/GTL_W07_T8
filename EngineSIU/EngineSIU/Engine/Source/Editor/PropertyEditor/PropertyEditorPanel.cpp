@@ -22,6 +22,8 @@
 #include "Engine/AssetManager.h"
 #include "UObject/UObjectIterator.h"
 #include "Renderer/ShadowPass.h"
+#include "Editor/LevelEditor/SLevelEditor.h"
+#include "Editor/UnrealEd/EditorViewportClient.h"
 
 void PropertyEditorPanel::Render()
 {
@@ -163,7 +165,7 @@ void PropertyEditorPanel::Render()
                     [&](FLinearColor c) { pointlightObj->SetLightColor(c); });
 
                 float Intensity = pointlightObj->GetIntensity();
-                if (ImGui::SliderFloat("Intensity", &Intensity, 0.0f, 160.0f, "%.1f"))
+                if (ImGui::SliderFloat("Intensity", &Intensity, 0.0f, 100000.f, "%.1f"))
                     pointlightObj->SetIntensity(Intensity);
 
                 float Radius = pointlightObj->GetRadius();
@@ -171,7 +173,6 @@ void PropertyEditorPanel::Render()
                     pointlightObj->SetRadius(Radius);
                 }
 
-                RenderLightShadowMap(pointlightObj);
                 float ShadowBias = pointlightObj->GetShadowBias();
                 if (ImGui::SliderFloat("Shadow Bias", &ShadowBias, 0.0001f, 0.001f, "%.4f"))
                     pointlightObj->SetShadowBias(ShadowBias);
@@ -183,6 +184,30 @@ void PropertyEditorPanel::Render()
                 float ShadowSharpen = pointlightObj->GetShadowSharpen();
                 if (ImGui::SliderFloat("Shadow Sharpen", &ShadowSharpen, 0.0f, 1.0f, "%.3f"))
                     pointlightObj->SetShadowSharpen(ShadowSharpen);
+
+                static bool bOverride = false;
+                if (GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent != pointlightObj)
+                {
+                    bOverride = false;
+                }
+                if (ImGui::Checkbox("Override camera with light's perspective", &bOverride))
+                {
+                    if (bOverride)
+                    {
+                        GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent = pointlightObj;
+                        if (auto e = Cast< UEditorEngine>(GEngine))
+                        {
+                            e->DeselectActor(pointlightObj->GetOwner());
+                            e->DeselectComponent(pointlightObj);
+                        }
+                    }
+                    else
+                    {
+                        GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent = nullptr;
+                    }
+                }
+
+                RenderLightShadowMap(pointlightObj);
 
                 ImGui::TreePop();
             }
@@ -202,7 +227,7 @@ void PropertyEditorPanel::Render()
                     [&](FLinearColor c) { spotlightObj->SetLightColor(c); });
 
                 float Intensity = spotlightObj->GetIntensity();
-                if (ImGui::SliderFloat("Intensity", &Intensity, 0.0f, 10000.0f, "%.1f"))
+                if (ImGui::SliderFloat("Intensity", &Intensity, 0.0f, 100000.f, "%.1f"))
                     spotlightObj->SetIntensity(Intensity);
 
                 float Radius = spotlightObj->GetRadius();
@@ -223,7 +248,6 @@ void PropertyEditorPanel::Render()
                     spotlightObj->SetOuterDegree(OuterDegree);
                 }
 
-                RenderLightShadowMap(spotlightObj);
 
                 float ShadowBias = spotlightObj->GetShadowBias();
                 if (ImGui::SliderFloat("Shadow Bias", &ShadowBias, 0.0001f, 0.001f, "%.4f"))
@@ -236,6 +260,30 @@ void PropertyEditorPanel::Render()
                 float ShadowSharpen = spotlightObj->GetShadowSharpen();
                 if (ImGui::SliderFloat("Shadow Sharpen", &ShadowSharpen, 0.0f, 1.0f, "%.3f"))
                     spotlightObj->SetShadowSharpen(ShadowSharpen);
+
+                static bool bOverride = false;
+                if (GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent != spotlightObj)
+                {
+                    bOverride = false;
+                }
+                if (ImGui::Checkbox("Override camera with light's perspective", &bOverride))
+                {
+                    if (bOverride)
+                    {
+                        GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent = spotlightObj;
+                        if (auto e = Cast< UEditorEngine>(GEngine))
+                        {
+                            e->DeselectActor(spotlightObj->GetOwner());
+                            e->DeselectComponent(spotlightObj);
+                        }
+                    }
+                    else
+                    {
+                        GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent = nullptr;
+                    }
+                }
+
+                RenderLightShadowMap(spotlightObj);
 
                 ImGui::TreePop();
             }
@@ -255,14 +303,12 @@ void PropertyEditorPanel::Render()
                     [&](FLinearColor c) { dirlightObj->SetLightColor(c); });
 
                 float Intensity = dirlightObj->GetIntensity();
-                if (ImGui::SliderFloat("Intensity", &Intensity, 0.0f, 150.0f, "%.1f"))
+                if (ImGui::SliderFloat("Intensity", &Intensity, 0.0f, 100000.f, "%.1f"))
                     dirlightObj->SetIntensity(Intensity);
 
                 LightDirection = dirlightObj->GetDirection();
                 FImGuiWidget::DrawVec3Control("Direction", LightDirection, 0, 85);
 
-                RenderLightShadowMap(dirlightObj);
-                //RenderLightShadowMap(dirlightObj);
                 float ShadowBias = dirlightObj->GetShadowBias();
                 if (ImGui::SliderFloat("Shadow Bias", &ShadowBias, 0.0001f, 0.001f, "%.4f"))
                     dirlightObj->SetShadowBias(ShadowBias);
@@ -274,6 +320,30 @@ void PropertyEditorPanel::Render()
                 float ShadowSharpen = dirlightObj->GetShadowSharpen();
                 if (ImGui::SliderFloat("Shadow Sharpen", &ShadowSharpen, 0.0f, 1.0f, "%.3f"))
                     dirlightObj->SetShadowSharpen(ShadowSharpen);
+
+                static bool bOverride = false;
+                if (GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent != dirlightObj)
+                {
+                    bOverride = false;
+                }
+                if (ImGui::Checkbox("Override camera with light's perspective", &bOverride))
+                {
+                    if (bOverride)
+                    {
+                        GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent = dirlightObj;
+                        if (auto e = Cast< UEditorEngine>(GEngine))
+                        {
+                            e->DeselectActor(dirlightObj->GetOwner());
+                            e->DeselectComponent(dirlightObj);
+                        }
+                    }
+                    else
+                    {
+                        GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent = nullptr;
+                    }
+                }
+
+                RenderLightShadowMap(dirlightObj);
 
                 ImGui::TreePop();
             }

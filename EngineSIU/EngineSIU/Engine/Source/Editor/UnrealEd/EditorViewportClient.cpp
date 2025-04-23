@@ -14,6 +14,10 @@
 #include "LevelEditor/SLevelEditor.h"
 #include "SlateCore/Input/Events.h"
 
+#include "Components/Light/DirectionalLightComponent.h"
+#include "Components/Light/SpotLightComponent.h"
+#include "Components/Light/PointLightComponent.h"
+
 FVector FEditorViewportClient::Pivot = FVector(0.0f, 0.0f, 0.0f);
 float FEditorViewportClient::OrthoSize = 10.0f;
 
@@ -408,6 +412,35 @@ void FEditorViewportClient::PivotMoveUp(float InValue)
 
 void FEditorViewportClient::UpdateViewMatrix()
 {
+    if (OverrideLightComponent)
+    {
+        if (UDirectionalLightComponent* DirLight = Cast<UDirectionalLightComponent>(OverrideLightComponent))
+        {
+            View = JungleMath::CreateViewMatrix(DirLight->GetWorldLocation(),
+                DirLight->GetWorldLocation() + DirLight->GetDirection(),
+                FVector{ 0.0f,0.0f, 1.0f }
+            );
+            return;
+        }
+        // 방향은 마우스 따라감
+        else if (UPointLightComponent* PointLight = Cast<UPointLightComponent>(OverrideLightComponent))
+        {
+            View = JungleMath::CreateViewMatrix(PointLight->GetWorldLocation(),
+                PointLight->GetWorldLocation() + PerspectiveCamera.GetForwardVector(),
+                FVector{ 0.0f,0.0f, 1.0f }
+            );
+            return;
+        }
+        else if (USpotLightComponent* SpotLight = Cast<USpotLightComponent>(OverrideLightComponent))
+        {
+            View = JungleMath::CreateViewMatrix(SpotLight->GetWorldLocation(),
+                SpotLight->GetWorldLocation() + SpotLight->GetDirection(),
+                FVector{ 0.0f,0.0f, 1.0f }
+            );
+            return;
+        }
+    }
+
     if (IsPerspective())
     {
         View = JungleMath::CreateViewMatrix(PerspectiveCamera.GetLocation(),
@@ -436,6 +469,45 @@ void FEditorViewportClient::UpdateViewMatrix()
 void FEditorViewportClient::UpdateProjectionMatrix()
 {
     AspectRatio = GetViewport()->GetD3DViewport().Width / GetViewport()->GetD3DViewport().Height;
+
+    if (OverrideLightComponent)
+    {
+        if (UDirectionalLightComponent* DirLight = Cast<UDirectionalLightComponent>(OverrideLightComponent))
+        {
+            // 오쏘그래픽 투영 행렬 생성 (nearPlane, farPlane 은 기존 값 사용)
+            Projection = JungleMath::CreateOrthoProjectionMatrix(
+                30,
+                30,
+                0.1,
+                300.f
+            );
+            return;
+        }
+        // 방향은 마우스 따라감
+        else if (UPointLightComponent* PointLight = Cast<UPointLightComponent>(OverrideLightComponent))
+        {
+            Projection = JungleMath::CreateProjectionMatrix(
+                FMath::DegreesToRadians(ViewFOV),
+                AspectRatio,
+                0.1,
+                PointLight->GetRadius()
+            );
+            return;
+        }
+        else if (USpotLightComponent* SpotLight = Cast<USpotLightComponent>(OverrideLightComponent))
+        {
+            Projection = JungleMath::CreateProjectionMatrix(
+                SpotLight->GetOuterRad(),
+                AspectRatio,
+                0.1,
+                SpotLight->GetRadius()
+            );
+            return;
+        }
+    }
+
+
+
     if (IsPerspective())
     {
         Projection = JungleMath::CreateProjectionMatrix(

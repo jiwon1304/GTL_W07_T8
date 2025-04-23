@@ -143,6 +143,8 @@ public:
     uint64 ShowFlag;
     EViewModeIndex ViewMode;
 
+    class ULightComponentBase* OverrideLightComponent = nullptr;
+
     FMatrix View;
     FMatrix Projection;
 

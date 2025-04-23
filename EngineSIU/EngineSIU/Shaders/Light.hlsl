@@ -356,7 +356,7 @@ float4 PointLight(int Index, float3 WorldPosition, float3 WorldNormal, float3 Wo
     
     // Check Shadow
     float ShadowFactor = 0.f;
-    
+ 
     if (LightInfo.CastsShadows)
     {
         for (int i = 0; i < 6; ++i)
@@ -373,7 +373,7 @@ float4 PointLight(int Index, float3 WorldPosition, float3 WorldNormal, float3 Wo
             );
         }
     }
-    
+    ShadowFactor -= 5;
     
 #ifdef LIGHTING_MODEL_LAMBERT
     float3 Lit = (DiffuseFactor * DiffuseColor) * ShadowFactor * LightInfo.LightColor.rgb;
