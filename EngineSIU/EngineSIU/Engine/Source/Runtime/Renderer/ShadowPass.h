@@ -10,6 +10,20 @@
 
 #include "Define.h"
 
+enum class EShadowFilterMethod : uint8
+{
+    NONE = 0,
+    PCF = 1,
+    POISSON = 2,
+    VSM = 3,
+};
+
+struct FShadowConfigurations
+{
+    int FilterMode;
+    FVector Padding;
+};
+
 class ULightComponentBase;
 
 class FShadowPass :
@@ -50,6 +64,7 @@ public:
     uint32 GetNumUsedTextureMapPoint() { return UsedShadowMapsForSpot; }
     uint32 GetTextureSize() { return TextureSize; }
     uint32 GetNumShadowMaps() { return NumShadowMaps; }
+    void SetShadowFilterMode(EShadowFilterMethod InFilterMode);
 private:
     HRESULT CreateShader();
 
@@ -96,20 +111,26 @@ private:
     uint32 UsedShadowMapsForSpot = 0;
 
     FWString VertexShaderBufferKey = L"ShadowPassDepthRenderShader";
+    FWString PixelShaderBufferKey = L"ShadowPassDepthRenderShader";
     FString TransformDataBufferKey = "ShadowTransformDataBufferKey";
     FString ViewProjTransformBufferKey = "ShadowViewProjTransformBufferKey"; // view->proj의 structuredbuffer index
     FString WorldTransformBufferKey = "ShadowWorldTransformBufferKey"; // staticmesh render할때 필요한 world trnasform
+    FString ShadowConfigBufferKey = "ShadowConfigurations";
 
+    static EShadowFilterMethod CurrentShadowFilterMode;
 public:
     static ID3D11Texture2D* ShadowMapTexture;
+    static ID3D11Texture2D* ShadowMapTextureVSM;
+    static ID3D11Texture2D* ShadowMapDepthVSM;
     static TArray<ID3D11DepthStencilView*> ShadowMapDSV;
+    static TArray<ID3D11DepthStencilView*> ShadowMapDSVVSM;
+    static TArray<ID3D11RenderTargetView*> ShadowMapRTV;
     static ID3D11ShaderResourceView* ShadowMapSRV;
+    static ID3D11ShaderResourceView* ShadowMapSRVVSM;
     static D3D11_VIEWPORT ShadowMapViewport;
     static ID3D11SamplerState* ShadowMapSampler;
+    static ID3D11SamplerState* ShadowMapSamplerVSM;
 
     static TMap<ULightComponentBase*, TArray<uint32>> IndicesMap; // LightComponentBase -> ShadowMaps/Transforms를 접근할때 광원에 해당하는 그림자맵의 index
-
-    
-
 };
 

@@ -20,11 +20,18 @@
 
 
 ID3D11Texture2D* FShadowPass::ShadowMapTexture;
+ID3D11Texture2D* FShadowPass::ShadowMapTextureVSM;
+ID3D11Texture2D* FShadowPass::ShadowMapDepthVSM;
 TArray<ID3D11DepthStencilView*> FShadowPass::ShadowMapDSV;
+TArray<ID3D11DepthStencilView*> FShadowPass::ShadowMapDSVVSM;
+TArray<ID3D11RenderTargetView*> FShadowPass::ShadowMapRTV;
 ID3D11ShaderResourceView* FShadowPass::ShadowMapSRV;
+ID3D11ShaderResourceView* FShadowPass::ShadowMapSRVVSM;
 TMap<ULightComponentBase*, TArray<uint32>> FShadowPass::IndicesMap;
 D3D11_VIEWPORT FShadowPass::ShadowMapViewport;
 ID3D11SamplerState* FShadowPass::ShadowMapSampler;
+ID3D11SamplerState* FShadowPass::ShadowMapSamplerVSM;
+EShadowFilterMethod FShadowPass::CurrentShadowFilterMode = EShadowFilterMethod::NONE;
 
 void FShadowPass::Initialize(FDXDBufferManager* InBufferManager, FGraphicsDevice* InGraphics, FDXDShaderManager* InShaderManage)
 {
@@ -53,11 +60,26 @@ void FShadowPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
     UpdatePerspectiveShadowMap(Viewport);
 
     ShaderManager->SetVertexShaderAndInputLayout(VertexShaderBufferKey, Graphics->DeviceContext);
-    ShaderManager->SetPixelShaderNull(Graphics->DeviceContext);
+
+	if (CurrentShadowFilterMode == EShadowFilterMethod::VSM) {
+		ShaderManager->SetPixelShader(PixelShaderBufferKey, Graphics->DeviceContext);
+	}
+	else 
+	{
+		ShaderManager->SetPixelShaderNull(Graphics->DeviceContext);
+	}
+
+	BufferManager->BindConstantBuffer(ShadowConfigBufferKey, 8, EShaderStage::Vertex);
+    BufferManager->BindConstantBuffer(ShadowConfigBufferKey, 8, EShaderStage::Pixel);
 
     BufferManager->BindStructuredBuffer(TransformDataBufferKey, TransformSRVSlot, EShaderStage::Vertex, EShaderViewType::SRV); // 실제 matrix
     BufferManager->BindConstantBuffer(ViewProjTransformBufferKey, ViewProjTransformCBSlot, EShaderStage::Vertex); // index만
     BufferManager->BindConstantBuffer(WorldTransformBufferKey, WorldTransformCBSlot, EShaderStage::Vertex); // worldmatrix
+
+	BufferManager->BindStructuredBuffer(TransformDataBufferKey, TransformSRVSlot, EShaderStage::Pixel, EShaderViewType::SRV);
+	BufferManager->BindConstantBuffer(ViewProjTransformBufferKey, ViewProjTransformCBSlot, EShaderStage::Pixel);
+	BufferManager->BindConstantBuffer(WorldTransformBufferKey, WorldTransformCBSlot, EShaderStage::Pixel);
+
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     Graphics->DeviceContext->RSSetViewports(1, &ShadowMapViewport);
     UsedShadowMaps = 0;
@@ -96,6 +118,37 @@ void FShadowPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
             Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, ShadowMapDSV[Index]);
             Graphics->DeviceContext->ClearDepthStencilView(ShadowMapDSV[Index], D3D11_CLEAR_DEPTH, 1.0f, 0);
 
+			if (CurrentShadowFilterMode == EShadowFilterMethod::VSM)
+			{
+				ID3D11ShaderResourceView* nullSRVs[1] = { nullptr };
+				//// 픽셀 셰이더 슬롯 10 언바인드
+				Graphics->DeviceContext->PSSetShaderResources(10, 1, nullSRVs);
+				// VSM: RTV 바인딩 및 클리어
+				FLOAT clearColor[4] = { 1.0f, 1.0f, 0.0f, 1.0f };
+				Graphics->DeviceContext->ClearRenderTargetView(
+					ShadowMapRTV[Index],
+					clearColor
+				);
+                Graphics->DeviceContext->ClearDepthStencilView(
+                    ShadowMapDSVVSM[Index],
+                    D3D11_CLEAR_DEPTH,
+                    1.0f,
+                    0
+                );
+				Graphics->DeviceContext->OMSetRenderTargets(
+					1,
+					&ShadowMapRTV[Index],
+					ShadowMapDSVVSM[Index]
+				);
+			}
+			else
+			{
+				Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, ShadowMapDSV[Index]);
+				Graphics->DeviceContext->ClearDepthStencilView(ShadowMapDSV[Index], D3D11_CLEAR_DEPTH, 1.0f, 0);
+			}
+            // OMSetrendertargets에서 DSV연결
+            // draw -> texture2d에 그려짐
+            // ... Do something with Index ...
 
             for (UStaticMeshComponent* Comp : StaticMeshComponents)
             {
@@ -120,9 +173,10 @@ void FShadowPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
             }
         }
     }
-
-    Graphics->DeviceContext->OMSetRenderTargets(0, nullptr ,nullptr);
-
+	ID3D11RenderTargetView* nullRTV = nullptr;
+	ID3D11DepthStencilView* nullDSV = nullptr;
+    Graphics->DeviceContext->OMSetRenderTargets(0, &nullRTV, nullDSV);
+	Graphics->DeviceContext->OMSetRenderTargets(1, &nullRTV, nullDSV);
 }
 
 void FShadowPass::ClearRenderArr()
@@ -163,6 +217,19 @@ bool FShadowPass::UpdateShadowMap(uint32 InTextureSize, uint32 InNumMaps)
     return true;
 }
 
+void FShadowPass::SetShadowFilterMode(EShadowFilterMethod InFilterMode)
+{
+    CurrentShadowFilterMode = InFilterMode;
+
+    FShadowConfigurations Settings;
+    Settings.FilterMode = static_cast<int>(CurrentShadowFilterMode);
+
+    BufferManager->UpdateConstantBuffer(
+        ShadowConfigBufferKey,
+        Settings
+    );
+}
+
 HRESULT FShadowPass::CreateShader()
 {
     D3D11_INPUT_ELEMENT_DESC StaticMeshLayoutDesc[] = {
@@ -191,6 +258,19 @@ HRESULT FShadowPass::CreateShader()
     ID3D11SamplerState* pShadowSampler;
     Graphics->Device->CreateSamplerState(&SamplerDesc, &ShadowMapSampler);
 
+	D3D11_SAMPLER_DESC vsmSamplerDesc = {};
+	vsmSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	vsmSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	vsmSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	vsmSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	vsmSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	vsmSamplerDesc.MinLOD = 0;
+	vsmSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	ID3D11SamplerState* vsmSampler = nullptr;
+	Graphics->Device->CreateSamplerState(&vsmSamplerDesc, &ShadowMapSamplerVSM);
+
+	ShaderManager->AddPixelShader(PixelShaderBufferKey, L"Shaders/ShadowDepthMapShader.hlsl", "mainPS");
     return ShaderManager->AddVertexShaderAndInputLayout(VertexShaderBufferKey, L"Shaders/ShadowDepthMapShader.hlsl", "mainVS", StaticMeshLayoutDesc, ARRAYSIZE(StaticMeshLayoutDesc));
 }
 
@@ -206,6 +286,7 @@ HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
         UE_LOG(LogLevel::Error, TEXT("Texture2DArray의 최대 크기 4096를 넘었습니다."));
         return S_FALSE;
     }
+
     NumShadowMaps = NumMaps;
     // 1. Depth Texture 생성
     D3D11_TEXTURE2D_DESC texDesc = {};
@@ -220,11 +301,40 @@ HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
     texDesc.MiscFlags = 0;
     texDesc.CPUAccessFlags = 0;
 
+    // VSM Depth
+    D3D11_TEXTURE2D_DESC depthDescVSM = {};
+    depthDescVSM.Width = TextureSize;
+    depthDescVSM.Height = TextureSize;
+    depthDescVSM.MipLevels = 1;
+    depthDescVSM.ArraySize = NumMaps;
+    depthDescVSM.Format = DXGI_FORMAT_D32_FLOAT;
+    depthDescVSM.SampleDesc.Count = 1;
+    depthDescVSM.Usage = D3D11_USAGE_DEFAULT;
+    depthDescVSM.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+	// VSM Texture
+	D3D11_TEXTURE2D_DESC texDescVSM = {};
+	texDescVSM.Width = TextureSize;
+	texDescVSM.Height = TextureSize;
+	texDescVSM.MipLevels = 1;
+	texDescVSM.ArraySize = NumMaps;
+	texDescVSM.Format = DXGI_FORMAT_R16G16_TYPELESS;
+	texDescVSM.SampleDesc.Count = 1;
+	texDescVSM.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	texDescVSM.Usage = D3D11_USAGE_DEFAULT;
+	texDescVSM.MiscFlags = 0;
+	texDescVSM.CPUAccessFlags = 0;
+
     HRESULT hr = Graphics->Device->CreateTexture2D(&texDesc, nullptr, &ShadowMapTexture);
     if (FAILED(hr)) { 
         return hr;
     }
 
+    Graphics->Device->CreateTexture2D(&depthDescVSM, nullptr, &ShadowMapDepthVSM);
+
+    // VSM Texture
+    Graphics->Device->CreateTexture2D(&texDescVSM, nullptr, &ShadowMapTextureVSM);
+    
     // 2. DepthStencilView 생성
     for (int i = 0; i < NumMaps; ++i)
     {
@@ -243,6 +353,38 @@ HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
         ShadowMapDSV.Add(DSV);
     }
 
+    // VSM DSV
+    for (int i = 0; i < NumMaps; ++i) {
+        D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+        dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+        dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+        dsvDesc.Texture2DArray.MipSlice = 0;
+        dsvDesc.Texture2DArray.FirstArraySlice = i;
+        dsvDesc.Texture2DArray.ArraySize = 1;
+
+        ID3D11DepthStencilView* DSV;
+        Graphics->Device->CreateDepthStencilView(ShadowMapDepthVSM, &dsvDesc, &DSV);
+        ShadowMapDSVVSM.Add(DSV);
+    }
+
+    // VSM RTVs
+    for (int i = 0; i < NumMaps; ++i)
+    {
+        D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+        rtvDesc.Format = DXGI_FORMAT_R16G16_FLOAT;
+        rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+        rtvDesc.Texture2DArray.MipSlice = 0;
+        rtvDesc.Texture2DArray.FirstArraySlice = i;
+        rtvDesc.Texture2DArray.ArraySize = 1;
+
+        ID3D11RenderTargetView* RTV;
+        hr = Graphics->Device->CreateRenderTargetView(ShadowMapTextureVSM, &rtvDesc, &RTV);
+        if (FAILED(hr)) {
+            return hr;
+        }
+        ShadowMapRTV.Add(RTV);
+    }
+
     // 3. ShaderResourceView 생성
     D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
     srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS; // Typeless와 호환되는 SRV 포맷
@@ -257,8 +399,23 @@ HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
         return hr;
     }
 
+    // SRV for VSM
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDescVSM = {};
+    srvDescVSM.Format = DXGI_FORMAT_R16G16_FLOAT; // 2-Channel format
+    srvDescVSM.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+    srvDescVSM.Texture2DArray.MostDetailedMip = 0;
+    srvDescVSM.Texture2DArray.MipLevels = 1;
+    srvDescVSM.Texture2DArray.FirstArraySlice = 0;
+    srvDescVSM.Texture2DArray.ArraySize = NumMaps;
+
+    hr = Graphics->Device->CreateShaderResourceView(ShadowMapTextureVSM, &srvDescVSM, &ShadowMapSRVVSM);
+    if (FAILED(hr)) {
+        return hr;
+    }
+
     // ShadowMap 텍스처는 내부적으로 관리되므로 참조 해제
     ShadowMapTexture->Release();
+    //ShadowMapTextureVSM->Release();
 
     ShadowMapViewport = {0};
     ShadowMapViewport.Width = static_cast<float>(TextureSize);
@@ -276,6 +433,11 @@ HRESULT FShadowPass::CreateBuffer(uint32 NumTransforms)
     }
 
     hr = BufferManager->CreateBufferGeneric<FMatrix>(WorldTransformBufferKey, nullptr, sizeof(FMatrix), D3D11_BIND_CONSTANT_BUFFER, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+    if (FAILED(hr)) {
+        return hr;
+    }
+
+    hr = BufferManager->CreateBufferGeneric<FShadowConfigurations>(ShadowConfigBufferKey, nullptr, sizeof(FShadowConfigurations), D3D11_BIND_CONSTANT_BUFFER, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
     if (FAILED(hr)) {
         return hr;
     }

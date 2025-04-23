@@ -210,9 +210,12 @@ void FStaticMeshRenderPass::PrepareRenderState(const std::shared_ptr<FEditorView
     D3D11_VIEWPORT DViewport = Viewport->GetViewportResource()->GetD3DViewport();
     Graphics->DeviceContext->RSSetViewports(1, &DViewport);
 
-    Graphics->DeviceContext->PSSetSamplers(8, 1, &FShadowPass::ShadowMapSampler);
     Graphics->DeviceContext->VSSetSamplers(8, 1, &FShadowPass::ShadowMapSampler);
+    Graphics->DeviceContext->PSSetSamplers(8, 1, &FShadowPass::ShadowMapSampler);
+    Graphics->DeviceContext->VSSetSamplers(10, 1, &FShadowPass::ShadowMapSamplerVSM);
+    Graphics->DeviceContext->PSSetSamplers(10, 1, &FShadowPass::ShadowMapSamplerVSM);
     Graphics->DeviceContext->PSSetShaderResources(FShadowPass::ShadowMapSRVSlot, 1, &FShadowPass::ShadowMapSRV);
+    Graphics->DeviceContext->PSSetShaderResources(10, 1, &FShadowPass::ShadowMapSRVVSM);
     BufferManager->BindStructuredBuffer("ShadowTransformDataBufferKey", FShadowPass::TransformSRVSlot, EShaderStage::Pixel, EShaderViewType::SRV); // 실제 matrix
 }
 

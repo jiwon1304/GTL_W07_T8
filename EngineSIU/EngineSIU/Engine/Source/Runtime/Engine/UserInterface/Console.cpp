@@ -1,9 +1,10 @@
 #include "Console.h"
 #include <cstdarg>
 #include <cstdio>
-
+#include "Runtime/Renderer/ShadowPass.h"
 #include "UnrealEd/EditorViewportClient.h"
 #include "Renderer/ShadowPass.h"
+#include "Runtime/Launch/EngineLoop.h"
 
 void StatOverlay::ToggleStat(const std::string& command)
 {
@@ -278,21 +279,7 @@ void Console::ExecuteCommand(const std::string& command)
     {
         std::string str = command.substr(20);
         int size = std::stoi(str);
-        //if (size < 64)
-        //{
-        //    UE_LOG(LogLevel::Error, "Maximum texture size is 64");
-        //    return;
-        //}
-        //if (size > 2048)
-        //{
-        //    UE_LOG(LogLevel::Error, "Maximum texture size is 2048.");
-        //    return;
-        //}
-        //if (size & (size - 1) != 0)
-        //{
-        //    UE_LOG(LogLevel::Error, "Texture size must be power of 2");
-        //    return;
-        //}
+
         FEngineLoop::Renderer.ShadowPass->UpdateShadowMap(size, 0);
         UE_LOG(LogLevel::Display, "Changed shadow map size into %d", size);
     }
@@ -300,18 +287,36 @@ void Console::ExecuteCommand(const std::string& command)
     {
         std::string str = command.substr(19);
         int num = std::stoi(str);
-        //if (num < 4)
-        //{
-        //    UE_LOG(LogLevel::Error, "Minimum number of texture is 4");
-        //    return;
-        //}
-        //if (num > 128)
-        //{
-        //    UE_LOG(LogLevel::Error, "Maximum number of texture is 128");
-        //    return;
-        //}
+
         FEngineLoop::Renderer.ShadowPass->UpdateShadowMap(0, num);
         UE_LOG(LogLevel::Display, "Changed number of shadow map into %d", num);
+    else if (command.starts_with("shadow_filter "))
+    {
+        std::string mode = command.substr(14);
+        if (mode == "NONE")
+        {
+            FEngineLoop::Renderer.ShadowPass->SetShadowFilterMode(EShadowFilterMethod::NONE);
+            UE_LOG(LogLevel::Display, "Shadow filter: NONE");
+        }
+        else if (mode == "PCF")
+        {
+            FEngineLoop::Renderer.ShadowPass->SetShadowFilterMode(EShadowFilterMethod::PCF);
+            UE_LOG(LogLevel::Display, "Shadow filter: PCF");
+        }
+        else if (mode == "POISSON")
+        {
+            FEngineLoop::Renderer.ShadowPass->SetShadowFilterMode(EShadowFilterMethod::POISSON);
+            UE_LOG(LogLevel::Display, "Shadow filter: Poisson");
+        }
+        else if (mode == "VSM")
+        {
+            FEngineLoop::Renderer.ShadowPass->SetShadowFilterMode(EShadowFilterMethod::VSM);
+            UE_LOG(LogLevel::Display, "Shadow filter: VSM");
+        }
+        else
+        {
+            UE_LOG(LogLevel::Error, "Invalid shadow filter mode");
+        }
     }
     else {
         AddLog(LogLevel::Error, "Unknown command: %s", command.c_str());

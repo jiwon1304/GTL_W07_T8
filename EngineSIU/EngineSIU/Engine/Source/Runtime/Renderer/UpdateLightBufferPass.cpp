@@ -144,7 +144,7 @@ void FUpdateLightBufferPass::UpdateLightBuffer() const
             Info.Intensity = Light->GetIntensity();
             Info.Direction = Light->GetDirection();
             Info.ShadowMapIndex = FShadowPass::GetShadowMapIndex(Light)[0];
-            Info.CastShadow = Light->GetCastShadowBoolean();
+            Info.CastShadow = Light->GetCastShadowBoolean() ? 1 : 0;
             Info.ShadowResolutionScale = Light->GetShadowResolutionScale();
             Info.ShadowBias = Light->GetShadowBias();
             Info.ShadowSlopeBias = Light->GetShadowSlopeBias();
@@ -168,7 +168,7 @@ void FUpdateLightBufferPass::UpdateLightBuffer() const
             Info.OuterRad = Light->GetOuterRad();
             Info.Type = ELightType::SPOT_LIGHT;
             Info.ShadowMapIndex = FShadowPass::GetShadowMapIndex(Light)[0];
-            Info.CastShadow = Light->GetCastShadowBoolean();
+            Info.CastShadow = Light->GetCastShadowBoolean() ? 1 : 0;
             Info.ShadowResolutionScale = Light->GetShadowResolutionScale();
             Info.ShadowBias = Light->GetShadowBias();
             Info.ShadowSlopeBias = Light->GetShadowSlopeBias();
@@ -189,7 +189,7 @@ void FUpdateLightBufferPass::UpdateLightBuffer() const
             Info.Attenuation = Light->GetAttenuation();
             Info.Type = ELightType::POINT_LIGHT;
             Info.ShadowMapIndex = FShadowPass::GetShadowMapIndex(Light)[0];
-            Info.CastShadow = Light->GetCastShadowBoolean();
+            Info.CastShadow = Light->GetCastShadowBoolean() ? 1 : 0;
             Info.ShadowResolutionScale = Light->GetShadowResolutionScale();
             Info.ShadowBias = Light->GetShadowBias();
             Info.ShadowSlopeBias = Light->GetShadowSlopeBias();

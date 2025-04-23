@@ -129,6 +129,12 @@ cbuffer Lighting : register(b0)
     int AmbientLightsCount;
 };
 
+cbuffer ShadowConfigurations : register(b8)
+{
+    int ShadowFilterMode;
+    float3 Padding;
+};
+
 StructuredBuffer<FAmbientLightInfo> AmbientLights : register(t20);
 StructuredBuffer<FDirectionalLightInfo> DirectionalLights : register(t21);
 StructuredBuffer<FSpotLightInfo> SpotLights : register(t22);
@@ -207,7 +213,7 @@ float ChebyshevUpperBound(float2 Moments, float DepthRecevier)
     
     // Compute variance.
     float Variance = Moments.y - (Moments.x * Moments.x);
-    Variance = max(Variance, 0.0001);
+    Variance = max(Variance, 0.000005);
     
     // Compute probabilistic upper bound.
     float d = DepthRecevier - Moments.x;
@@ -217,11 +223,12 @@ float ChebyshevUpperBound(float2 Moments, float DepthRecevier)
     pMax = smoothstep(0.0, 1.0, pMax);
     
     return max(p, pMax);
+    return p ? 1.0 : (1.0 - pMax);
 }
 
 float FilterVSM(float2 ShadowUV, float DepthRecevier, int ShadowIndex)
 {
-    float2 Moments = VSMShadowMapArray.Sample(VSMSampler, float3(ShadowUV, ShadowIndex)).rg;
+    float2 Moments = VSMShadowMapArray.SampleLevel(VSMSampler, float3(ShadowUV, ShadowIndex), 0).rg;
     return ChebyshevUpperBound(Moments, DepthRecevier);
 }
 
@@ -263,10 +270,18 @@ float CalculateShadowFactor(
     if (any(ShadowUV < 0.0 || ShadowUV > 1.0)) 
         return 1.0f; // 텍스쳐 경계 바깥 Lit
 
-    int FilterMode = 1;
-
-    switch (FilterMode)
+    [branch]
+    switch (ShadowFilterMode)
     {
+        case 0:
+        {
+            ShadowFactor = ShadowMapArray.SampleCmpLevelZero(
+                ShadowSampler,
+                float3(ShadowUV, ShadowIndex),
+                DepthReceiver
+            );
+                break;
+            }
         case 1: // PCF
         {
             int KernelSize = lerp(9.0f, 1.0f, AdjustedSharpness);
@@ -280,11 +295,11 @@ float CalculateShadowFactor(
             ShadowFactor = FilterPoisson(ShadowUV, TexelSize, DepthReceiver, ShadowIndex, Spread, SampleCount);
             break;
         }
-        //case 3: // VSM
-        //{
-        //  ShadowFactor = FilterVSM(ShadowUV, DepthReceiver, ShadowIndex);
-        //  break;
-        //}
+        case 3: // VSM
+        {
+            ShadowFactor = FilterVSM(ShadowUV, DepthReceiver, ShadowIndex);
+            break;
+        }
         default: // Default Hard Shadow
         {
             ShadowFactor = ShadowMapArray.SampleCmpLevelZero(
