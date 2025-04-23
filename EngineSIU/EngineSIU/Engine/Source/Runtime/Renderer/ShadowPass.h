@@ -86,6 +86,7 @@ private:
     uint32 NumShadowMaps = 128; // initial value
 
     FWString VertexShaderBufferKey = L"ShadowPassDepthRenderShader";
+    FWString PixelShaderBufferKey = L"ShadowPassDepthRenderShader";
     FString TransformDataBufferKey = "ShadowTransformDataBufferKey";
     FString ViewProjTransformBufferKey = "ShadowViewProjTransformBufferKey"; // view->proj의 structuredbuffer index
     FString WorldTransformBufferKey = "ShadowWorldTransformBufferKey"; // staticmesh render할때 필요한 world trnasform
@@ -94,10 +95,14 @@ private:
     static EShadowFilterMethod CurrentShadowFilterMode;
 public:
     static ID3D11Texture2D* ShadowMapTexture;
+    static ID3D11Texture2D* ShadowMapTextureVSM;
     static TArray<ID3D11DepthStencilView*> ShadowMapDSV;
+    static TArray<ID3D11RenderTargetView*> ShadowMapRTV;
     static ID3D11ShaderResourceView* ShadowMapSRV;
+    static ID3D11ShaderResourceView* ShadowMapSRVVSM;
     static D3D11_VIEWPORT ShadowMapViewport;
     static ID3D11SamplerState* ShadowMapSampler;
+    static ID3D11SamplerState* ShadowMapSamplerVSM;
 
     static TMap<ULightComponentBase*, TArray<uint32>> IndicesMap; // LightComponentBase -> ShadowMaps/Transforms를 접근할때 광원에 해당하는 그림자맵의 index
 };

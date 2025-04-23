@@ -213,7 +213,7 @@ float ChebyshevUpperBound(float2 Moments, float DepthRecevier)
     
     // Compute variance.
     float Variance = Moments.y - (Moments.x * Moments.x);
-    Variance = max(Variance, 0.0001);
+    Variance = max(Variance, 0.00001);
     
     // Compute probabilistic upper bound.
     float d = DepthRecevier - Moments.x;
@@ -223,6 +223,7 @@ float ChebyshevUpperBound(float2 Moments, float DepthRecevier)
     pMax = smoothstep(0.0, 1.0, pMax);
     
     return max(p, pMax);
+    return p ? 1.0 : (1.0 - pMax);
 }
 
 float FilterVSM(float2 ShadowUV, float DepthRecevier, int ShadowIndex)
@@ -294,11 +295,11 @@ float CalculateShadowFactor(
             ShadowFactor = FilterPoisson(ShadowUV, TexelSize, DepthReceiver, ShadowIndex, Spread, SampleCount);
             break;
         }
-        //case 3: // VSM
-        //{
-        //  ShadowFactor = FilterVSM(ShadowUV, DepthReceiver, ShadowIndex);
-        //  break;
-        //}
+        case 3: // VSM
+        {
+            ShadowFactor = FilterVSM(ShadowUV, DepthReceiver, ShadowIndex);
+            break;
+        }
         default: // Default Hard Shadow
         {
             ShadowFactor = ShadowMapArray.SampleCmpLevelZero(
