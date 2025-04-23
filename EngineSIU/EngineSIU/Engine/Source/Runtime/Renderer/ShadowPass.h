@@ -41,7 +41,7 @@ public:
 
     bool UpdateShadowMap(uint32 InTextureSize, uint32 InNumMaps);
 
-    uint32 GetAllocatedTextureMapSize() { return TextureSize * TextureSize * NumShadowMaps; }
+    uint64 GetAllocatedTextureMapSize() { return 4 * TextureSize * TextureSize * NumShadowMaps; }
 
     uint32 GetNumUsedTextureMap() { return UsedShadowMaps; }
 

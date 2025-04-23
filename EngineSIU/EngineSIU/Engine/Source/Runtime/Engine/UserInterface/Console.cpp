@@ -75,13 +75,14 @@ void StatOverlay::Render(ID3D11DeviceContext* context, UINT width, UINT height) 
 
     if (showShadowMemory)
     {
-        uint32 TextureMapAllocated = FEngineLoop::Renderer.ShadowPass->GetAllocatedTextureMapSize();
+        uint64 TextureMapAllocated = FEngineLoop::Renderer.ShadowPass->GetAllocatedTextureMapSize();
+        uint32 TextureMapAllocatedMB = TextureMapAllocated / (uint64)(1024 * 1024);
         uint32 UsedTextureMaps = FEngineLoop::Renderer.ShadowPass->GetNumUsedTextureMap();
         uint32 UsedTextureMapsDir = FEngineLoop::Renderer.ShadowPass->GetNumUsedTextureMapDir();
         uint32 UsedTextureMapsSpot = FEngineLoop::Renderer.ShadowPass->GetNumUsedTextureMapSpot();
         uint32 UsedTextureMapsPoint = FEngineLoop::Renderer.ShadowPass->GetNumUsedTextureMapPoint();
 
-        ImGui::Text("Allocated VRAM for shadow map %llu B", TextureMapAllocated);
+        ImGui::Text("Allocated VRAM for shadow map %d MB", TextureMapAllocatedMB);
         ImGui::Text("(%d px * %d px) * %d", 
             FEngineLoop::Renderer.ShadowPass->GetTextureSize(), 
             FEngineLoop::Renderer.ShadowPass->GetTextureSize(), 

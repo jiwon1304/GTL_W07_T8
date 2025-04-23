@@ -133,49 +133,33 @@ void FShadowPass::ClearRenderArr()
 
 bool FShadowPass::UpdateShadowMap(uint32 InTextureSize, uint32 InNumMaps)
 {
-    uint32 TotalSize = InTextureSize * InTextureSize * InNumMaps;
-    //if (InTextureSize < 64)
-    //{
-    //    UE_LOG(LogLevel::Error, "Maximum texture size is 64");
-    //    return;
-    //}
-    //if (InTextureSize > 2048)
-    //{
-    //    UE_LOG(LogLevel::Error, "Maximum texture size is 2048.");
-    //    return;
-    //}
+
+    if(InTextureSize == 0)
+    {
+        InTextureSize = TextureSize;
+    }
+    if (InNumMaps == 0)
+    {
+        InNumMaps = NumShadowMaps;
+    }
+    uint64 TotalSize = InTextureSize * InTextureSize * InNumMaps;
+
     if (InTextureSize & (InTextureSize - 1) != 0)
     {
         UE_LOG(LogLevel::Error, "Texture size must be power of 2");
         return false;
     }
 
-    //if (InNumMaps < 4)
-    //{
-    //    UE_LOG(LogLevel::Error, "Minimum number of texture is 4");
-    //    return;
-    //}
-    //if (InNumMaps > 128)
-    //{
-    //    UE_LOG(LogLevel::Error, "Maximum number of texture is 128");
-    //    return;
-    //}
     if (TotalSize > MaxSize)
     {
         UE_LOG(LogLevel::Error, "Maximum size exceeded");
         return false;
     }
-
-    if(InTextureSize != 0)
-    {
-        TextureSize = InTextureSize;
-    }
-    if (InNumMaps != 0)
-    {
-        NumShadowMaps = InNumMaps;
-    }
     ReleaseTexture();
     CreateTexture(TextureSize, NumShadowMaps);
+    TextureSize = InTextureSize;
+    NumShadowMaps = InNumMaps;
+
     return true;
 }
 
