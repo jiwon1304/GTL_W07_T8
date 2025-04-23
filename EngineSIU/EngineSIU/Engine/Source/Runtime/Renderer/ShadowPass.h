@@ -42,7 +42,7 @@ public:
 
     static ID3D11ShaderResourceView* GetShadowMapSRV() { return ShadowMapSRV; }
 
-    static TArray<uint32> GetShadowMapIndex(ULightComponentBase* InLightComponent) 
+    static TArray<uint32> GetShadowMapIndex(ULightComponentBase* InLightComponent)
     {
         if (IndicesMap.Contains(InLightComponent))
         {
@@ -64,6 +64,8 @@ public:
     uint32 GetNumUsedTextureMapPoint() { return UsedShadowMapsForSpot; }
     uint32 GetTextureSize() { return TextureSize; }
     uint32 GetNumShadowMaps() { return NumShadowMaps; }
+
+
     void SetShadowFilterMode(EShadowFilterMethod InFilterMode);
 private:
     HRESULT CreateShader();
@@ -73,6 +75,8 @@ private:
     HRESULT CreateBuffer(uint32 NumTransforms);
 
     void ReleaseTexture();
+
+    void UpdateShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport);
 
     void UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport);
 

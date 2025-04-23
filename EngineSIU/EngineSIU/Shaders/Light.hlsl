@@ -275,7 +275,7 @@ float CalculateShadowFactor(
     {
         case 0:
         {
-            ShadowFactor = ShadowMapArray.SampleCmpLevelZero(
+                ShadowFactor = ShadowMapArray.SampleCmpLevelZero(
                 ShadowSampler,
                 float3(ShadowUV, ShadowIndex),
                 DepthReceiver
@@ -284,30 +284,30 @@ float CalculateShadowFactor(
             }
         case 1: // PCF
         {
-            int KernelSize = lerp(9.0f, 1.0f, AdjustedSharpness);
-            ShadowFactor = FilterPCF(ShadowUV, TexelSize, DepthReceiver, ShadowIndex, KernelSize);
-            break;
-        }
+                int KernelSize = lerp(9.0f, 1.0f, AdjustedSharpness);
+                ShadowFactor = FilterPCF(ShadowUV, TexelSize, DepthReceiver, ShadowIndex, KernelSize);
+                break;
+            }
         case 2: // Poisson
         {
-            float Spread = lerp(3.0, 0.0, AdjustedSharpness);
-            int SampleCount = lerp(32, 4, AdjustedSharpness);
-            ShadowFactor = FilterPoisson(ShadowUV, TexelSize, DepthReceiver, ShadowIndex, Spread, SampleCount);
-            break;
-        }
+                float Spread = lerp(3.0, 0.0, AdjustedSharpness);
+                int SampleCount = lerp(32, 4, AdjustedSharpness);
+                ShadowFactor = FilterPoisson(ShadowUV, TexelSize, DepthReceiver, ShadowIndex, Spread, SampleCount);
+                break;
+            }
         case 3: // VSM
         {
-            ShadowFactor = FilterVSM(ShadowUV, DepthReceiver, ShadowIndex);
-            break;
-        }
+                ShadowFactor = FilterVSM(ShadowUV, DepthReceiver, ShadowIndex);
+                break;
+            }
         default: // Default Hard Shadow
         {
-            ShadowFactor = ShadowMapArray.SampleCmpLevelZero(
+                ShadowFactor = ShadowMapArray.SampleCmpLevelZero(
                 ShadowSampler,
                 float3(ShadowUV, ShadowIndex),
                 DepthReceiver
             );
-        }
+            }
     }
 
     return ShadowFactor;
@@ -370,28 +370,26 @@ float4 PointLight(int Index, float3 WorldPosition, float3 WorldNormal, float3 Wo
     float DiffuseFactor = CalculateDiffuse(WorldNormal, LightDir);
     
     // Check Shadow
-    float ShadowFactor = 0.f;
- 
+    float ShadowFactor = 1.f;
+    
     if (LightInfo.CastsShadows)
     {
-        if (LightInfo.ShadowMapIndex >= 0)
+        for (int i = 0; i < 6; ++i)
         {
-            for (int i = 0; i < 6; ++i)
-            {
-                ShadowFactor += CalculateShadowFactor(
-                    LigthViewProjection[LightInfo.ShadowMapIndex + i].TransposedMat,
-                    LightInfo.ShadowMapIndex + i,
-                    WorldPosition,
-                    WorldNormal,
-                    LightDir,
-                    LightInfo.ShadowBias,
-                    LightInfo.ShadowSlopeBias,
-                    LightInfo.ShadowSharpen
-                );
-            }
+            ShadowFactor += CalculateShadowFactor(
+                LigthViewProjection[LightInfo.ShadowMapIndex + i].TransposedMat,
+                LightInfo.ShadowMapIndex + i,
+                WorldPosition,
+                WorldNormal,
+                LightDir,
+                LightInfo.ShadowBias,
+                LightInfo.ShadowSlopeBias,
+                LightInfo.ShadowSharpen
+            );
         }
+        ShadowFactor /= 6.0;
     }
-    ShadowFactor -= 5;
+    
     
 #ifdef LIGHTING_MODEL_LAMBERT
     float3 Lit = (DiffuseFactor * DiffuseColor) * ShadowFactor * LightInfo.LightColor.rgb;
@@ -431,19 +429,16 @@ float4 SpotLight(int Index, float3 WorldPosition, float3 WorldNormal, float3 Wor
     
     if (LightInfo.CastsShadows)
     {
-        if (LightInfo.ShadowMapIndex >= 0)
-        {
-            ShadowFactor = CalculateShadowFactor(
-                LigthViewProjection[LightInfo.ShadowMapIndex].TransposedMat,
-                LightInfo.ShadowMapIndex,
-                WorldPosition,
-                WorldNormal,
-                LightDir,
-                LightInfo.ShadowBias,
-                LightInfo.ShadowSlopeBias,
-                LightInfo.ShadowSharpen
-            );
-        }
+        ShadowFactor = CalculateShadowFactor(
+            LigthViewProjection[LightInfo.ShadowMapIndex].TransposedMat,
+            LightInfo.ShadowMapIndex,
+            WorldPosition,
+            WorldNormal,
+            LightDir,
+            LightInfo.ShadowBias,
+            LightInfo.ShadowSlopeBias,
+            LightInfo.ShadowSharpen
+        );
     }
      
 #ifdef LIGHTING_MODEL_LAMBERT
@@ -470,19 +465,16 @@ float4 DirectionalLight(int nIndex, float3 WorldPosition, float3 WorldNormal, fl
     
     if (LightInfo.CastsShadows)
     {
-        if (LightInfo.ShadowMapIndex >= 0)
-        {
-            ShadowFactor = CalculateShadowFactor(
-                LigthViewProjection[LightInfo.ShadowMapIndex].TransposedMat,
-                LightInfo.ShadowMapIndex,
-                WorldPosition,
-                WorldNormal,
-                LightDir,
-                LightInfo.ShadowBias,
-                LightInfo.ShadowSlopeBias,
-                LightInfo.ShadowSharpen
-            );
-        }
+        ShadowFactor = CalculateShadowFactor(
+            LigthViewProjection[LightInfo.ShadowMapIndex].TransposedMat,
+            LightInfo.ShadowMapIndex,
+            WorldPosition,
+            WorldNormal,
+            LightDir,
+            LightInfo.ShadowBias,
+            LightInfo.ShadowSlopeBias,
+            LightInfo.ShadowSharpen
+        );
     }
 
 #ifdef LIGHTING_MODEL_LAMBERT

@@ -280,16 +280,20 @@ void Console::ExecuteCommand(const std::string& command)
         std::string str = command.substr(20);
         int size = std::stoi(str);
 
-        FEngineLoop::Renderer.ShadowPass->UpdateShadowMap(size, 0);
-        UE_LOG(LogLevel::Display, "Changed shadow map size into %d", size);
+        if (FEngineLoop::Renderer.ShadowPass->UpdateShadowMap(size, 0))
+        {
+            UE_LOG(LogLevel::Display, "Changed shadow map size into %d", size);
+        }
     }
     else if (command.starts_with("shadow texture num "))
     {
         std::string str = command.substr(19);
         int num = std::stoi(str);
 
-        FEngineLoop::Renderer.ShadowPass->UpdateShadowMap(0, num);
-        UE_LOG(LogLevel::Display, "Changed number of shadow map into %d", num);
+        if (FEngineLoop::Renderer.ShadowPass->UpdateShadowMap(0, num))
+        {
+            UE_LOG(LogLevel::Display, "Changed number of shadow map into %d", num);
+        }
     }
     else if (command.starts_with("shadow_filter "))
     {
