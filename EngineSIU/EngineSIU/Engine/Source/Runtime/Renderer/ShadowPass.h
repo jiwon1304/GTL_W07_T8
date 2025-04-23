@@ -42,8 +42,28 @@ public:
 
     static ID3D11ShaderResourceView* GetShadowMapSRV() { return ShadowMapSRV; }
 
-    static TArray<uint32> GetShadowMapIndex(ULightComponentBase* InLightComponent) { return IndicesMap[InLightComponent]; }
+    static TArray<uint32> GetShadowMapIndex(ULightComponentBase* InLightComponent) 
+    {
+        if (IndicesMap.Contains(InLightComponent))
+        {
+            return IndicesMap[InLightComponent];
+        }
+        TArray<uint32> e;
+        e.Add(-1);
+        return e;
+    }
 
+    bool UpdateShadowMap(uint32 InTextureSize, uint32 InNumMaps);
+
+    uint64 GetAllocatedTextureMapSize() { return 4 * TextureSize * TextureSize * (2 * NumShadowMaps + 1); }
+
+    uint32 GetNumUsedTextureMap() { return UsedShadowMaps; }
+
+    uint32 GetNumUsedTextureMapDir() { return UsedShadowMapsForDir; }
+    uint32 GetNumUsedTextureMapSpot() { return UsedShadowMapsForPoint; }
+    uint32 GetNumUsedTextureMapPoint() { return UsedShadowMapsForSpot; }
+    uint32 GetTextureSize() { return TextureSize; }
+    uint32 GetNumShadowMaps() { return NumShadowMaps; }
     void SetShadowFilterMode(EShadowFilterMethod InFilterMode);
 private:
     HRESULT CreateShader();
@@ -52,7 +72,7 @@ private:
 
     HRESULT CreateBuffer(uint32 NumTransforms);
 
-    void UpdateShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport);
+    void ReleaseTexture();
 
     void UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport);
 
@@ -82,8 +102,13 @@ public:
 private:
     TArray<class UStaticMeshComponent*> StaticMeshComponents;
 
+    const uint32 MaxSize = 536870912; // 2048 2048 128
     uint32 TextureSize = 1024; // initial value
     uint32 NumShadowMaps = 128; // initial value
+    uint32 UsedShadowMaps = 0;
+    uint32 UsedShadowMapsForDir = 0;
+    uint32 UsedShadowMapsForPoint = 0;
+    uint32 UsedShadowMapsForSpot = 0;
 
     FWString VertexShaderBufferKey = L"ShadowPassDepthRenderShader";
     FWString PixelShaderBufferKey = L"ShadowPassDepthRenderShader";

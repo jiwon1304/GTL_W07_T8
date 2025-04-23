@@ -22,6 +22,8 @@
 #include "Engine/AssetManager.h"
 #include "UObject/UObjectIterator.h"
 #include "Renderer/ShadowPass.h"
+#include "Editor/LevelEditor/SLevelEditor.h"
+#include "Editor/UnrealEd/EditorViewportClient.h"
 
 void PropertyEditorPanel::Render()
 {
@@ -163,7 +165,7 @@ void PropertyEditorPanel::Render()
                     [&](FLinearColor c) { pointlightObj->SetLightColor(c); });
 
                 float Intensity = pointlightObj->GetIntensity();
-                if (ImGui::SliderFloat("Intensity", &Intensity, 0.0f, 160.0f, "%.1f"))
+                if (ImGui::SliderFloat("Intensity", &Intensity, 0.0f, 100000.f, "%.1f"))
                     pointlightObj->SetIntensity(Intensity);
 
                 float Radius = pointlightObj->GetRadius();
@@ -189,6 +191,30 @@ void PropertyEditorPanel::Render()
                 if (ImGui::SliderFloat("Shadow Sharpen", &ShadowSharpen, 0.0f, 1.0f, "%.3f"))
                     pointlightObj->SetShadowSharpen(ShadowSharpen);
 
+                static bool bOverride = false;
+                if (GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent != pointlightObj)
+                {
+                    bOverride = false;
+                }
+                if (ImGui::Checkbox("Override camera with light's perspective", &bOverride))
+                {
+                    if (bOverride)
+                    {
+                        GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent = pointlightObj;
+                        if (auto e = Cast< UEditorEngine>(GEngine))
+                        {
+                            e->DeselectActor(pointlightObj->GetOwner());
+                            e->DeselectComponent(pointlightObj);
+                        }
+                    }
+                    else
+                    {
+                        GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent = nullptr;
+                    }
+                }
+
+                RenderLightShadowMap(pointlightObj);
+
                 ImGui::TreePop();
             }
 
@@ -207,7 +233,7 @@ void PropertyEditorPanel::Render()
                     [&](FLinearColor c) { spotlightObj->SetLightColor(c); });
 
                 float Intensity = spotlightObj->GetIntensity();
-                if (ImGui::SliderFloat("Intensity", &Intensity, 0.0f, 10000.0f, "%.1f"))
+                if (ImGui::SliderFloat("Intensity", &Intensity, 0.0f, 100000.f, "%.1f"))
                     spotlightObj->SetIntensity(Intensity);
 
                 float Radius = spotlightObj->GetRadius();
@@ -246,6 +272,30 @@ void PropertyEditorPanel::Render()
                 if (ImGui::SliderFloat("Shadow Sharpen", &ShadowSharpen, 0.0f, 1.0f, "%.3f"))
                     spotlightObj->SetShadowSharpen(ShadowSharpen);
 
+                static bool bOverride = false;
+                if (GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent != spotlightObj)
+                {
+                    bOverride = false;
+                }
+                if (ImGui::Checkbox("Override camera with light's perspective", &bOverride))
+                {
+                    if (bOverride)
+                    {
+                        GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent = spotlightObj;
+                        if (auto e = Cast< UEditorEngine>(GEngine))
+                        {
+                            e->DeselectActor(spotlightObj->GetOwner());
+                            e->DeselectComponent(spotlightObj);
+                        }
+                    }
+                    else
+                    {
+                        GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent = nullptr;
+                    }
+                }
+
+                RenderLightShadowMap(spotlightObj);
+
                 ImGui::TreePop();
             }
 
@@ -264,7 +314,7 @@ void PropertyEditorPanel::Render()
                     [&](FLinearColor c) { dirlightObj->SetLightColor(c); });
 
                 float Intensity = dirlightObj->GetIntensity();
-                if (ImGui::SliderFloat("Intensity", &Intensity, 0.0f, 150.0f, "%.1f"))
+                if (ImGui::SliderFloat("Intensity", &Intensity, 0.0f, 100000.f, "%.1f"))
                     dirlightObj->SetIntensity(Intensity);
 
                 LightDirection = dirlightObj->GetDirection();
@@ -288,6 +338,30 @@ void PropertyEditorPanel::Render()
                 float ShadowSharpen = dirlightObj->GetShadowSharpen();
                 if (ImGui::SliderFloat("Shadow Sharpen", &ShadowSharpen, 0.0f, 1.0f, "%.3f"))
                     dirlightObj->SetShadowSharpen(ShadowSharpen);
+
+                static bool bOverride = false;
+                if (GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent != dirlightObj)
+                {
+                    bOverride = false;
+                }
+                if (ImGui::Checkbox("Override camera with light's perspective", &bOverride))
+                {
+                    if (bOverride)
+                    {
+                        GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent = dirlightObj;
+                        if (auto e = Cast< UEditorEngine>(GEngine))
+                        {
+                            e->DeselectActor(dirlightObj->GetOwner());
+                            e->DeselectComponent(dirlightObj);
+                        }
+                    }
+                    else
+                    {
+                        GEngineLoop.GetLevelEditor()->GetActiveViewportClient()->OverrideLightComponent = nullptr;
+                    }
+                }
+
+                RenderLightShadowMap(dirlightObj);
 
                 ImGui::TreePop();
             }
@@ -943,16 +1017,75 @@ void PropertyEditorPanel::RenderMaterialTexture(UMaterial* InMaterial)
 
 void PropertyEditorPanel::RenderLightShadowMap(ULightComponentBase* InLightComponent)
 {
-    ID3D11ShaderResourceView* SRV = FShadowPass::GetShadowMapSRV();
-    TArray<uint32> Indices = FShadowPass::GetShadowMapIndex(InLightComponent);
+    static ULightComponentBase* LastComponent = nullptr;
+    static TArray<ID3D11ShaderResourceView*> SRVs;
+    if (LastComponent != InLightComponent)
+    {
+        for (auto& SRV : SRVs)
+        {
+            if (SRV)
+            {
+                SRV->Release();
+                SRV = nullptr;
+            }
+        }
+        SRVs.Empty();
+
+        // 새로운 SRV를 생성
+        int NumSRV = InLightComponent->IsA<UPointLightComponent>() ? 6 : 1;
+        TArray<uint32> Indices = FShadowPass::GetShadowMapIndex(InLightComponent);
+        for (int i = 0; i < NumSRV; i++)
+        {
+            D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+            srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+            srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+            srvDesc.Texture2DArray.MostDetailedMip = 0;
+            srvDesc.Texture2DArray.MipLevels = 1;
+            srvDesc.Texture2DArray.FirstArraySlice = Indices[i];
+            srvDesc.Texture2DArray.ArraySize = 1;
+
+            ID3D11ShaderResourceView* SRV = nullptr;
+            HRESULT hr = GEngineLoop.GraphicDevice.Device->CreateShaderResourceView(FShadowPass::ShadowMapTexture, &srvDesc, &SRV);
+            if (FAILED(hr)) {
+                return;
+            }
+            SRVs.Add(SRV);
+        }
+        LastComponent = InLightComponent;
+    }
+
     float RegionWidth = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
 
     if (ImGui::TreeNodeEx("ShadowMaps", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
     {
-
-        for (uint32 i = 0; i < Indices.Num(); ++i)
+        int NumSRV = InLightComponent->IsA<UPointLightComponent>() ? 6 : 1;
+        for (uint32 i = 0; i < NumSRV; ++i)
         {
-            ImGui::Image((ImTextureID)(intptr_t)SRV, ImVec2(250,250));
+            if (NumSRV == 6)
+            {
+                switch (i)
+                {
+                case 0:
+                    ImGui::Text("+ X");
+                    break;
+                case 1:
+                    ImGui::Text("+ Y");
+                    break;
+                case 2:
+                    ImGui::Text("+ Z");
+                    break;
+                case 3:
+                    ImGui::Text("- X");
+                    break;
+                case 4:
+                    ImGui::Text("- Y");
+                    break;
+                case 5:
+                    ImGui::Text("- Z");
+                    break;
+                }
+            }
+            ImGui::Image((ImTextureID)(intptr_t)SRVs[i], ImVec2(250, 250));
         }
         ImGui::TreePop();
     }

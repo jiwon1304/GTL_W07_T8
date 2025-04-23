@@ -3,6 +3,7 @@
 #include <cstdio>
 #include "Runtime/Renderer/ShadowPass.h"
 #include "UnrealEd/EditorViewportClient.h"
+#include "Renderer/ShadowPass.h"
 #include "Runtime/Launch/EngineLoop.h"
 
 void StatOverlay::ToggleStat(const std::string& command)
@@ -16,12 +17,14 @@ void StatOverlay::ToggleStat(const std::string& command)
     {
         showMemory = true;
         showRender = true;
+        showShadowMemory = true;
     }
     else if (command == "stat none")
     {
         showFPS = false;
         showMemory = false;
         showRender = false;
+        showShadowMemory = false;
     }
 }
 
@@ -69,6 +72,25 @@ void StatOverlay::Render(ID3D11DeviceContext* context, UINT width, UINT height) 
         ImGui::Text("Allocated Object Memory: %llu B", FPlatformMemory::GetAllocationBytes<EAT_Object>());
         ImGui::Text("Allocated Container Count: %llu", FPlatformMemory::GetAllocationCount<EAT_Container>());
         ImGui::Text("Allocated Container memory: %llu B", FPlatformMemory::GetAllocationBytes<EAT_Container>());
+    }
+
+    if (showShadowMemory)
+    {
+        uint64 TextureMapAllocated = FEngineLoop::Renderer.ShadowPass->GetAllocatedTextureMapSize();
+        uint32 TextureMapAllocatedMB = TextureMapAllocated / (uint64)(1024 * 1024);
+        uint32 UsedTextureMaps = FEngineLoop::Renderer.ShadowPass->GetNumUsedTextureMap();
+        uint32 UsedTextureMapsDir = FEngineLoop::Renderer.ShadowPass->GetNumUsedTextureMapDir();
+        uint32 UsedTextureMapsSpot = FEngineLoop::Renderer.ShadowPass->GetNumUsedTextureMapSpot();
+        uint32 UsedTextureMapsPoint = FEngineLoop::Renderer.ShadowPass->GetNumUsedTextureMapPoint();
+
+        ImGui::Text("Allocated VRAM for shadow map %d MB", TextureMapAllocatedMB);
+        ImGui::Text("4B * (%d px * %d px) * (2 * %d + 1)", 
+            FEngineLoop::Renderer.ShadowPass->GetTextureSize(), 
+            FEngineLoop::Renderer.ShadowPass->GetTextureSize(), 
+            FEngineLoop::Renderer.ShadowPass->GetNumShadowMaps());
+        ImGui::Text("Number of currently used shadow map %d", UsedTextureMaps);
+        ImGui::Text("Directional : %d, PointLight : %d, SpotLight : %d", UsedTextureMapsDir, UsedTextureMapsSpot, UsedTextureMapsPoint);
+
     }
     ImGui::PopStyleColor();
     ImGui::End();
@@ -252,6 +274,22 @@ void Console::ExecuteCommand(const std::string& command)
     }
     else if (command.starts_with("stat ")) { // stat 명령어 처리
         overlay.ToggleStat(command);
+    }
+    else if (command.starts_with("shadow texture size "))
+    {
+        std::string str = command.substr(20);
+        int size = std::stoi(str);
+
+        FEngineLoop::Renderer.ShadowPass->UpdateShadowMap(size, 0);
+        UE_LOG(LogLevel::Display, "Changed shadow map size into %d", size);
+    }
+    else if (command.starts_with("shadow texture num "))
+    {
+        std::string str = command.substr(19);
+        int num = std::stoi(str);
+
+        FEngineLoop::Renderer.ShadowPass->UpdateShadowMap(0, num);
+        UE_LOG(LogLevel::Display, "Changed number of shadow map into %d", num);
     }
     else if (command.starts_with("shadow_filter "))
     {

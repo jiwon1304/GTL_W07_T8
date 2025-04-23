@@ -26,7 +26,7 @@ private:
     FDXDBufferManager* BufferManager;
     FGraphicsDevice* Graphics;
     FDXDShaderManager* ShaderManager;
-    FRenderResourcesDebug Resources;
+    FRenderResourcesDebug Resources = {};
 
     void CreateShaders();
     void PrepareShader(FShaderResource ShaderResource) const;
