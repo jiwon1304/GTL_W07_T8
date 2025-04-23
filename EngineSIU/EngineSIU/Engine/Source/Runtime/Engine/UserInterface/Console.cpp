@@ -84,7 +84,7 @@ void StatOverlay::Render(ID3D11DeviceContext* context, UINT width, UINT height) 
         uint32 UsedTextureMapsPoint = FEngineLoop::Renderer.ShadowPass->GetNumUsedTextureMapPoint();
 
         ImGui::Text("Allocated VRAM for shadow map %d MB", TextureMapAllocatedMB);
-        ImGui::Text("(%d px * %d px) * %d", 
+        ImGui::Text("4B * (%d px * %d px) * (2 * %d + 1)", 
             FEngineLoop::Renderer.ShadowPass->GetTextureSize(), 
             FEngineLoop::Renderer.ShadowPass->GetTextureSize(), 
             FEngineLoop::Renderer.ShadowPass->GetNumShadowMaps());
@@ -290,6 +290,7 @@ void Console::ExecuteCommand(const std::string& command)
 
         FEngineLoop::Renderer.ShadowPass->UpdateShadowMap(0, num);
         UE_LOG(LogLevel::Display, "Changed number of shadow map into %d", num);
+    }
     else if (command.starts_with("shadow_filter "))
     {
         std::string mode = command.substr(14);

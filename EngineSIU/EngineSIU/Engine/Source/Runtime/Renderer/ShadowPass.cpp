@@ -415,7 +415,8 @@ HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
 
     // ShadowMap 텍스처는 내부적으로 관리되므로 참조 해제
     ShadowMapTexture->Release();
-    //ShadowMapTextureVSM->Release();
+    ShadowMapTextureVSM->Release();
+    ShadowMapDepthVSM->Release();
 
     ShadowMapViewport = {0};
     ShadowMapViewport.Width = static_cast<float>(TextureSize);
@@ -448,11 +449,6 @@ HRESULT FShadowPass::CreateBuffer(uint32 NumTransforms)
 
 void FShadowPass::ReleaseTexture()
 {
-    if (FShadowPass::ShadowMapTexture)
-    {
-        FShadowPass::ShadowMapTexture = nullptr;
-    }
-
     if (FShadowPass::ShadowMapDSV[0])
     {
         for (auto& DSV : ShadowMapDSV)
@@ -462,25 +458,34 @@ void FShadowPass::ReleaseTexture()
         }
         ShadowMapDSV.Empty();
     }
-    //if (FShadowPass::ShadowMapRTV[0])
-    //{
-    //    for (auto& RTV : ShadowMapRTV)
-    //    {
-    //        RTV->Release();
-    //        RTV = nullptr;
-    //    }
-    //    ShadowMapRTV.Empty();
-    //}
+    if (FShadowPass::ShadowMapDSVVSM[0])
+    {
+        for (auto& DSV : ShadowMapDSVVSM)
+        {
+            DSV->Release();
+            DSV = nullptr;
+        }
+        ShadowMapDSVVSM.Empty();
+    }
+    if (FShadowPass::ShadowMapRTV[0])
+    {
+        for (auto& RTV : ShadowMapRTV)
+        {
+            RTV->Release();
+            RTV = nullptr;
+        }
+        ShadowMapRTV.Empty();
+    }
     if (FShadowPass::ShadowMapSRV)
     {
         FShadowPass::ShadowMapSRV->Release();
         FShadowPass::ShadowMapSRV = nullptr;
     }
-    //if (FShadowPass::ShadowMapSRVVSM)
-    //{
-    //    FShadowPass::ShadowMapSRVVSM->Release();
-    //    FShadowPass::ShadowMapSRVVSM = nullptr;
-    //}
+    if (FShadowPass::ShadowMapSRVVSM)
+    {
+        FShadowPass::ShadowMapSRVVSM->Release();
+        FShadowPass::ShadowMapSRVVSM = nullptr;
+    }
 }
 
 
