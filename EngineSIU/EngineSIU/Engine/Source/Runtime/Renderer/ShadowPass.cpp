@@ -260,7 +260,7 @@ HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
 	texDescVSM.Height = TextureSize;
 	texDescVSM.MipLevels = 1;
 	texDescVSM.ArraySize = NumMaps;
-	texDescVSM.Format = DXGI_FORMAT_R32G32_TYPELESS;
+	texDescVSM.Format = DXGI_FORMAT_R16G16_TYPELESS;
 	texDescVSM.SampleDesc.Count = 1;
 	texDescVSM.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	texDescVSM.Usage = D3D11_USAGE_DEFAULT;
@@ -313,7 +313,7 @@ HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
     for (int i = 0; i < NumMaps; ++i)
     {
         D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-        rtvDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+        rtvDesc.Format = DXGI_FORMAT_R16G16_FLOAT;
         rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
         rtvDesc.Texture2DArray.MipSlice = 0;
         rtvDesc.Texture2DArray.FirstArraySlice = i;
@@ -343,7 +343,7 @@ HRESULT FShadowPass::CreateTexture(uint32 TextureSize, uint32 NumMaps)
 
     // SRV for VSM
     D3D11_SHADER_RESOURCE_VIEW_DESC srvDescVSM = {};
-    srvDescVSM.Format = DXGI_FORMAT_R32G32_FLOAT; // 2-Channel format
+    srvDescVSM.Format = DXGI_FORMAT_R16G16_FLOAT; // 2-Channel format
     srvDescVSM.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
     srvDescVSM.Texture2DArray.MostDetailedMip = 0;
     srvDescVSM.Texture2DArray.MipLevels = 1;
