@@ -22,6 +22,7 @@ public:
     bool showFPS = false;
     bool showMemory = false;
     bool showRender = false;
+    bool showShadowMemory = false;
 
     void ToggleStat(const std::string& command);
     void Render(ID3D11DeviceContext* context, UINT width, UINT height) const;

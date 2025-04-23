@@ -359,18 +359,21 @@ float4 PointLight(int Index, float3 WorldPosition, float3 WorldNormal, float3 Wo
  
     if (LightInfo.CastsShadows)
     {
-        for (int i = 0; i < 6; ++i)
+        if (LightInfo.ShadowMapIndex >= 0)
         {
-            ShadowFactor += CalculateShadowFactor(
-                LigthViewProjection[LightInfo.ShadowMapIndex + i].TransposedMat,
-                LightInfo.ShadowMapIndex + i,
-                WorldPosition,
-                WorldNormal,
-                LightDir,
-                LightInfo.ShadowBias,
-                LightInfo.ShadowSlopeBias,
-                LightInfo.ShadowSharpen
-            );
+            for (int i = 0; i < 6; ++i)
+            {
+                ShadowFactor += CalculateShadowFactor(
+                    LigthViewProjection[LightInfo.ShadowMapIndex + i].TransposedMat,
+                    LightInfo.ShadowMapIndex + i,
+                    WorldPosition,
+                    WorldNormal,
+                    LightDir,
+                    LightInfo.ShadowBias,
+                    LightInfo.ShadowSlopeBias,
+                    LightInfo.ShadowSharpen
+                );
+            }
         }
     }
     ShadowFactor -= 5;
@@ -413,16 +416,19 @@ float4 SpotLight(int Index, float3 WorldPosition, float3 WorldNormal, float3 Wor
     
     if (LightInfo.CastsShadows)
     {
-        ShadowFactor = CalculateShadowFactor(
-            LigthViewProjection[LightInfo.ShadowMapIndex].TransposedMat,
-            LightInfo.ShadowMapIndex,
-            WorldPosition,
-            WorldNormal,
-            LightDir,
-            LightInfo.ShadowBias,
-            LightInfo.ShadowSlopeBias,
-            LightInfo.ShadowSharpen
-        );
+        if (LightInfo.ShadowMapIndex >= 0)
+        {
+            ShadowFactor = CalculateShadowFactor(
+                LigthViewProjection[LightInfo.ShadowMapIndex].TransposedMat,
+                LightInfo.ShadowMapIndex,
+                WorldPosition,
+                WorldNormal,
+                LightDir,
+                LightInfo.ShadowBias,
+                LightInfo.ShadowSlopeBias,
+                LightInfo.ShadowSharpen
+            );
+        }
     }
      
 #ifdef LIGHTING_MODEL_LAMBERT
@@ -449,16 +455,19 @@ float4 DirectionalLight(int nIndex, float3 WorldPosition, float3 WorldNormal, fl
     
     if (LightInfo.CastsShadows)
     {
-        ShadowFactor = CalculateShadowFactor(
-            LigthViewProjection[LightInfo.ShadowMapIndex].TransposedMat,
-            LightInfo.ShadowMapIndex,
-            WorldPosition,
-            WorldNormal,
-            LightDir,
-            LightInfo.ShadowBias,
-            LightInfo.ShadowSlopeBias,
-            LightInfo.ShadowSharpen
-        );
+        if (LightInfo.ShadowMapIndex >= 0)
+        {
+            ShadowFactor = CalculateShadowFactor(
+                LigthViewProjection[LightInfo.ShadowMapIndex].TransposedMat,
+                LightInfo.ShadowMapIndex,
+                WorldPosition,
+                WorldNormal,
+                LightDir,
+                LightInfo.ShadowBias,
+                LightInfo.ShadowSlopeBias,
+                LightInfo.ShadowSharpen
+            );
+        }
     }
 
 #ifdef LIGHTING_MODEL_LAMBERT

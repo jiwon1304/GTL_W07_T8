@@ -60,6 +60,11 @@ void FShadowPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
     BufferManager->BindConstantBuffer(WorldTransformBufferKey, WorldTransformCBSlot, EShaderStage::Vertex); // worldmatrix
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     Graphics->DeviceContext->RSSetViewports(1, &ShadowMapViewport);
+    UsedShadowMaps = 0;
+    UsedShadowMapsForDir = 0;
+    UsedShadowMapsForPoint = 0;
+    UsedShadowMapsForSpot = 0;
+
     for (const auto& Pair : IndicesMap)
     {
         ULightComponentBase* Light = Pair.Key;
@@ -68,12 +73,29 @@ void FShadowPass::Render(const std::shared_ptr<FEditorViewportClient>& Viewport)
         // 사용 예
         for (uint32 Index : Indices)
         {
+            if (UsedShadowMaps >= NumShadowMaps)
+            {
+                Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
+                return;
+            }
+            UsedShadowMaps++;
+            if (Light->IsA<UDirectionalLightComponent>())
+            {
+                UsedShadowMapsForDir++;
+            }
+            else if(Light->IsA<UPointLightComponent>())
+            {
+                UsedShadowMapsForPoint++;
+            }
+            else if (Light->IsA<USpotLightComponent>())
+            {
+                UsedShadowMapsForSpot++;
+            }
+            
             BufferManager->UpdateConstantBuffer(ViewProjTransformBufferKey, Index);
             Graphics->DeviceContext->OMSetRenderTargets(0, nullptr, ShadowMapDSV[Index]);
             Graphics->DeviceContext->ClearDepthStencilView(ShadowMapDSV[Index], D3D11_CLEAR_DEPTH, 1.0f, 0);
-            // OMSetrendertargets에서 DSV연결
-            // draw -> texture2d에 그려짐
-            // ... Do something with Index ...
+
 
             for (UStaticMeshComponent* Comp : StaticMeshComponents)
             {
@@ -349,7 +371,6 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
 
             if (Index >= NumShadowMaps)
             {
-                UE_LOG(LogLevel::Warning, "Number of shadow map exceeded.");
                 break;
             }
             IndicesMap[LightComponent].Add(Index);

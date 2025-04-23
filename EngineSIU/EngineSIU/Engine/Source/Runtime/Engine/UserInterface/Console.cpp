@@ -16,12 +16,14 @@ void StatOverlay::ToggleStat(const std::string& command)
     {
         showMemory = true;
         showRender = true;
+        showShadowMemory = true;
     }
     else if (command == "stat none")
     {
         showFPS = false;
         showMemory = false;
         showRender = false;
+        showShadowMemory = false;
     }
 }
 
@@ -69,6 +71,24 @@ void StatOverlay::Render(ID3D11DeviceContext* context, UINT width, UINT height) 
         ImGui::Text("Allocated Object Memory: %llu B", FPlatformMemory::GetAllocationBytes<EAT_Object>());
         ImGui::Text("Allocated Container Count: %llu", FPlatformMemory::GetAllocationCount<EAT_Container>());
         ImGui::Text("Allocated Container memory: %llu B", FPlatformMemory::GetAllocationBytes<EAT_Container>());
+    }
+
+    if (showShadowMemory)
+    {
+        uint32 TextureMapAllocated = FEngineLoop::Renderer.ShadowPass->GetAllocatedTextureMapSize();
+        uint32 UsedTextureMaps = FEngineLoop::Renderer.ShadowPass->GetNumUsedTextureMap();
+        uint32 UsedTextureMapsDir = FEngineLoop::Renderer.ShadowPass->GetNumUsedTextureMapDir();
+        uint32 UsedTextureMapsSpot = FEngineLoop::Renderer.ShadowPass->GetNumUsedTextureMapSpot();
+        uint32 UsedTextureMapsPoint = FEngineLoop::Renderer.ShadowPass->GetNumUsedTextureMapPoint();
+
+        ImGui::Text("Allocated VRAM for shadow map %llu B", TextureMapAllocated);
+        ImGui::Text("(%d px * %d px) * %d", 
+            FEngineLoop::Renderer.ShadowPass->GetTextureSize(), 
+            FEngineLoop::Renderer.ShadowPass->GetTextureSize(), 
+            FEngineLoop::Renderer.ShadowPass->GetNumShadowMaps());
+        ImGui::Text("Number of currently used shadow map %d", UsedTextureMaps);
+        ImGui::Text("Directional : %d, PointLight : %d, SpotLight : %d", UsedTextureMapsDir, UsedTextureMapsSpot, UsedTextureMapsPoint);
+
     }
     ImGui::PopStyleColor();
     ImGui::End();
