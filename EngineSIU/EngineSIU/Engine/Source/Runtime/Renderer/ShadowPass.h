@@ -30,6 +30,7 @@ public:
 
     static TArray<uint32> GetShadowMapIndex(ULightComponentBase* InLightComponent) { return IndicesMap[InLightComponent]; }
 
+    bool UpdateShadowMap(uint32 InTextureSize, uint32 InNumMaps);
 private:
     HRESULT CreateShader();
 
@@ -37,7 +38,8 @@ private:
 
     HRESULT CreateBuffer(uint32 NumTransforms);
 
-    void UpdateShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport);
+    void ReleaseTexture();
+
 
     void UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport);
 
@@ -46,8 +48,6 @@ private:
     void UpdateCascadedShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport);
 
     void RenderPrimitive(OBJ::FStaticMeshRenderData* RenderData, TArray<class FStaticMaterial*> Materials, TArray<class UMaterial*> OverrideMaterials, int SelectedSubMeshIndex) const;
-
-
 
     class ID3D11VertexShader* VertexShader;
 
@@ -69,6 +69,7 @@ public:
 private:
     TArray<class UStaticMeshComponent*> StaticMeshComponents;
 
+    const uint32 MaxSize = 536870912; // 2048 2048 128
     uint32 TextureSize = 1024; // initial value
     uint32 NumShadowMaps = 128; // initial value
 

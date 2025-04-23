@@ -3,7 +3,7 @@
 #include <cstdio>
 
 #include "UnrealEd/EditorViewportClient.h"
-
+#include "Renderer/ShadowPass.h"
 
 void StatOverlay::ToggleStat(const std::string& command)
 {
@@ -252,6 +252,45 @@ void Console::ExecuteCommand(const std::string& command)
     }
     else if (command.starts_with("stat ")) { // stat 명령어 처리
         overlay.ToggleStat(command);
+    }
+    else if (command.starts_with("shadow texture size "))
+    {
+        std::string str = command.substr(20);
+        int size = std::stoi(str);
+        //if (size < 64)
+        //{
+        //    UE_LOG(LogLevel::Error, "Maximum texture size is 64");
+        //    return;
+        //}
+        //if (size > 2048)
+        //{
+        //    UE_LOG(LogLevel::Error, "Maximum texture size is 2048.");
+        //    return;
+        //}
+        //if (size & (size - 1) != 0)
+        //{
+        //    UE_LOG(LogLevel::Error, "Texture size must be power of 2");
+        //    return;
+        //}
+        FEngineLoop::Renderer.ShadowPass->UpdateShadowMap(size, 0);
+        UE_LOG(LogLevel::Display, "Changed shadow map size into %d", size);
+    }
+    else if (command.starts_with("shadow texture num "))
+    {
+        std::string str = command.substr(19);
+        int num = std::stoi(str);
+        //if (num < 4)
+        //{
+        //    UE_LOG(LogLevel::Error, "Minimum number of texture is 4");
+        //    return;
+        //}
+        //if (num > 128)
+        //{
+        //    UE_LOG(LogLevel::Error, "Maximum number of texture is 128");
+        //    return;
+        //}
+        FEngineLoop::Renderer.ShadowPass->UpdateShadowMap(0, num);
+        UE_LOG(LogLevel::Display, "Changed number of shadow map into %d", num);
     }
     else {
         AddLog(LogLevel::Error, "Unknown command: %s", command.c_str());

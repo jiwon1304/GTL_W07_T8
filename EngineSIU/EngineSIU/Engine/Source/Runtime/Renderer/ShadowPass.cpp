@@ -109,6 +109,54 @@ void FShadowPass::ClearRenderArr()
 }    
 
 
+bool FShadowPass::UpdateShadowMap(uint32 InTextureSize, uint32 InNumMaps)
+{
+    uint32 TotalSize = InTextureSize * InTextureSize * InNumMaps;
+    //if (InTextureSize < 64)
+    //{
+    //    UE_LOG(LogLevel::Error, "Maximum texture size is 64");
+    //    return;
+    //}
+    //if (InTextureSize > 2048)
+    //{
+    //    UE_LOG(LogLevel::Error, "Maximum texture size is 2048.");
+    //    return;
+    //}
+    if (InTextureSize & (InTextureSize - 1) != 0)
+    {
+        UE_LOG(LogLevel::Error, "Texture size must be power of 2");
+        return false;
+    }
+
+    //if (InNumMaps < 4)
+    //{
+    //    UE_LOG(LogLevel::Error, "Minimum number of texture is 4");
+    //    return;
+    //}
+    //if (InNumMaps > 128)
+    //{
+    //    UE_LOG(LogLevel::Error, "Maximum number of texture is 128");
+    //    return;
+    //}
+    if (TotalSize > MaxSize)
+    {
+        UE_LOG(LogLevel::Error, "Maximum size exceeded");
+        return false;
+    }
+
+    if(InTextureSize != 0)
+    {
+        TextureSize = InTextureSize;
+    }
+    if (InNumMaps != 0)
+    {
+        NumShadowMaps = InNumMaps;
+    }
+    ReleaseTexture();
+    CreateTexture(TextureSize, NumShadowMaps);
+    return true;
+}
+
 HRESULT FShadowPass::CreateShader()
 {
     D3D11_INPUT_ELEMENT_DESC StaticMeshLayoutDesc[] = {
@@ -230,9 +278,43 @@ HRESULT FShadowPass::CreateBuffer(uint32 NumTransforms)
         D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE, sizeof(FMatrix), NumTransforms);
 }
 
-//void FShadowPass::UpdateShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport)
-//{
-//}
+void FShadowPass::ReleaseTexture()
+{
+    if (FShadowPass::ShadowMapTexture)
+    {
+        FShadowPass::ShadowMapTexture = nullptr;
+    }
+
+    if (FShadowPass::ShadowMapDSV[0])
+    {
+        for (auto& DSV : ShadowMapDSV)
+        {
+            DSV->Release();
+            DSV = nullptr;
+        }
+        ShadowMapDSV.Empty();
+    }
+    //if (FShadowPass::ShadowMapRTV[0])
+    //{
+    //    for (auto& RTV : ShadowMapRTV)
+    //    {
+    //        RTV->Release();
+    //        RTV = nullptr;
+    //    }
+    //    ShadowMapRTV.Empty();
+    //}
+    if (FShadowPass::ShadowMapSRV)
+    {
+        FShadowPass::ShadowMapSRV->Release();
+        FShadowPass::ShadowMapSRV = nullptr;
+    }
+    //if (FShadowPass::ShadowMapSRVVSM)
+    //{
+    //    FShadowPass::ShadowMapSRVVSM->Release();
+    //    FShadowPass::ShadowMapSRVVSM = nullptr;
+    //}
+}
+
 
 void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewportClient>& Viewport)
 {
@@ -265,6 +347,11 @@ void FShadowPass::UpdatePerspectiveShadowMap(const std::shared_ptr<FEditorViewpo
             FMatrix Proj = JungleMath::CreateOrthoProjectionMatrix(30.0, 30.0, 0.1f, 300.f); // 파라미터 받아서값 조절할 수 있게 만들기
             //FMatrix Proj = JungleMath::CreateProjectionMatrix(150, 1, 0.1, 30.f);
 
+            if (Index >= NumShadowMaps)
+            {
+                UE_LOG(LogLevel::Warning, "Number of shadow map exceeded.");
+                break;
+            }
             IndicesMap[LightComponent].Add(Index);
             Transforms.Add({ View * Proj, });
             Index++;
