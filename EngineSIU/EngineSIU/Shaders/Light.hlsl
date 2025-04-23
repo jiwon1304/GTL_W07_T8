@@ -213,7 +213,7 @@ float ChebyshevUpperBound(float2 Moments, float DepthRecevier)
     
     // Compute variance.
     float Variance = Moments.y - (Moments.x * Moments.x);
-    Variance = max(Variance, 0.00001);
+    Variance = max(Variance, 0.000005);
     
     // Compute probabilistic upper bound.
     float d = DepthRecevier - Moments.x;
@@ -228,7 +228,7 @@ float ChebyshevUpperBound(float2 Moments, float DepthRecevier)
 
 float FilterVSM(float2 ShadowUV, float DepthRecevier, int ShadowIndex)
 {
-    float2 Moments = VSMShadowMapArray.Sample(VSMSampler, float3(ShadowUV, ShadowIndex)).rg;
+    float2 Moments = VSMShadowMapArray.SampleLevel(VSMSampler, float3(ShadowUV, ShadowIndex), 0).rg;
     return ChebyshevUpperBound(Moments, DepthRecevier);
 }
 

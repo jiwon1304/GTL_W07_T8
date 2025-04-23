@@ -96,7 +96,9 @@ private:
 public:
     static ID3D11Texture2D* ShadowMapTexture;
     static ID3D11Texture2D* ShadowMapTextureVSM;
+    static ID3D11Texture2D* ShadowMapDepthVSM;
     static TArray<ID3D11DepthStencilView*> ShadowMapDSV;
+    static TArray<ID3D11DepthStencilView*> ShadowMapDSVVSM;
     static TArray<ID3D11RenderTargetView*> ShadowMapRTV;
     static ID3D11ShaderResourceView* ShadowMapSRV;
     static ID3D11ShaderResourceView* ShadowMapSRVVSM;

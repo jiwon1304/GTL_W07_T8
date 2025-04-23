@@ -61,7 +61,9 @@ PS_OUTPUT mainPS(VS_OUPUT Input)
     
     float depth = Input.Position.z / Input.Position.w;
     
-    Output.Moments = float2(depth, depth * depth);
+    float dx = ddx(depth);
+    float dy = ddy(depth);
+    Output.Moments = float2(depth, depth * depth + 0.25 * (dx * dx + dy * dy));
     
     return Output;
 }
